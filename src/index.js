@@ -62,6 +62,7 @@ class FastScrollView {
     this.lastScrollTop = 0; // 上次滚动位置
     this.batchUpdateMode = false; // 批量更新模式标志
     this.pendingUpdate = false; // 是否有待处理的更新
+    this.currentTransformOffset = 0; // 当前 transform 偏移量（锁定以避免跳动）
 
     // 初始化
     this.init();
@@ -78,26 +79,26 @@ class FastScrollView {
     this.container.style.overflow = 'auto';
     this.container.style.position = 'relative';
 
-    // 创建虚拟滚动容器（用于撑开滚动条）
+    // 创建滚动容器（使用传统的三层结构，更稳定）
     this.scrollContainer = document.createElement('div');
-    this.scrollContainer.style.position = 'absolute';
-    this.scrollContainer.style.top = '0';
-    this.scrollContainer.style.left = '0';
-    this.scrollContainer.style.width = '1px';
-    this.scrollContainer.style.height = '0px';
-    this.scrollContainer.style.pointerEvents = 'none';
+    this.scrollContainer.style.width = '100%';
 
-    // 创建内容容器（使用 transform 定位）
+    // 创建顶部占位符
+    this.topSpacer = document.createElement('div');
+    this.topSpacer.style.height = '0px';
+
+    // 创建内容容器
     this.contentContainer = document.createElement('div');
-    this.contentContainer.style.position = 'absolute';
-    this.contentContainer.style.top = '0';
-    this.contentContainer.style.left = '0';
-    this.contentContainer.style.right = '0';
-    this.contentContainer.style.willChange = 'transform';
+
+    // 创建底部占位符
+    this.bottomSpacer = document.createElement('div');
+    this.bottomSpacer.style.height = '0px';
 
     // 组装 DOM
+    this.scrollContainer.appendChild(this.topSpacer);
+    this.scrollContainer.appendChild(this.contentContainer);
+    this.scrollContainer.appendChild(this.bottomSpacer);
     this.container.appendChild(this.scrollContainer);
-    this.container.appendChild(this.contentContainer);
 
     // 绑定滚动事件（保存引用以便后续正确移除）
     this.boundHandleScroll = this.handleScroll.bind(this);
@@ -191,8 +192,8 @@ class FastScrollView {
   updateVisibleItems() {
     if (this.items.length === 0) {
       this.contentContainer.innerHTML = '';
-      this.contentContainer.style.transform = 'translateY(0px)';
-      this.scrollContainer.style.height = '0px';
+      this.topSpacer.style.height = '0px';
+      this.bottomSpacer.style.height = '0px';
       return;
     }
 
@@ -224,14 +225,14 @@ class FastScrollView {
     this.visibleStart = startIndex;
     this.visibleEnd = endIndex;
 
-    // 获取起始位置（用于 transform）
-    const offsetY = this.itemPositions.get(startIndex) || 0;
+    // 计算占位符高度
+    const topSpacerHeight = this.itemPositions.get(startIndex) || 0;
+    const bottomPosition = this.itemPositions.get(endIndex) || totalHeight;
+    const bottomSpacerHeight = Math.max(0, totalHeight - bottomPosition);
 
-    // 更新虚拟滚动容器高度（撑开滚动条）
-    this.scrollContainer.style.height = `${totalHeight}px`;
-
-    // 使用 transform 定位内容容器
-    this.contentContainer.style.transform = `translateY(${offsetY}px)`;
+    // 更新占位符（使用文档流，不会跳动）
+    this.topSpacer.style.height = `${topSpacerHeight}px`;
+    this.bottomSpacer.style.height = `${bottomSpacerHeight}px`;
 
     // 渲染可视区域的元素
     this.renderVisibleItems(startIndex, endIndex);
@@ -242,7 +243,6 @@ class FastScrollView {
     }
 
     // 渲染完成后，重置更新标志
-    // 使用较长的延迟确保所有DOM操作和高度测量完成
     this.updateTimeout = setTimeout(() => {
       this.isUpdating = false;
       this.updateTimeout = null;
@@ -394,31 +394,35 @@ class FastScrollView {
         }
       });
 
-      // 如果高度发生变化，需要重新计算占位符高度
+      // 如果高度发生变化，重新计算占位符
       if (heightChanged) {
-        this.recalculateSpacers();
+        const totalHeight = this.calculatePositions();
+        const topSpacerHeight = this.itemPositions.get(this.visibleStart) || 0;
+        const bottomPosition = this.itemPositions.get(this.visibleEnd) || totalHeight;
+        const bottomSpacerHeight = Math.max(0, totalHeight - bottomPosition);
+        
+        this.topSpacer.style.height = `${topSpacerHeight}px`;
+        this.bottomSpacer.style.height = `${bottomSpacerHeight}px`;
       }
     });
   }
+
 
   /**
    * 重新计算占位符高度（不触发重新渲染）
    */
   recalculateSpacers() {
-    // 标记正在更新，防止触发滚动处理
     const wasUpdating = this.isUpdating;
     this.isUpdating = true;
     
     const totalHeight = this.calculatePositions();
-    const offsetY = this.itemPositions.get(this.visibleStart) || 0;
+    const topSpacerHeight = this.itemPositions.get(this.visibleStart) || 0;
+    const bottomPosition = this.itemPositions.get(this.visibleEnd) || totalHeight;
+    const bottomSpacerHeight = Math.max(0, totalHeight - bottomPosition);
     
-    // 更新虚拟滚动容器高度
-    this.scrollContainer.style.height = `${totalHeight}px`;
+    this.topSpacer.style.height = `${topSpacerHeight}px`;
+    this.bottomSpacer.style.height = `${bottomSpacerHeight}px`;
     
-    // 更新内容容器位置
-    this.contentContainer.style.transform = `translateY(${offsetY}px)`;
-    
-    // 恢复更新标志
     if (!wasUpdating) {
       setTimeout(() => {
         this.isUpdating = false;
