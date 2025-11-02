@@ -376,6 +376,9 @@
 
     function loadMoreMessages() {
       console.time('加载更多消息');
+      
+      // 使用批量API，一次性添加1000条，避免多次更新
+      const newMessages = [];
       for (let i = 0; i < 1000; i++) {
         const user = users[Math.floor(Math.random() * users.length)];
         const template = messageTemplates[Math.floor(Math.random() * messageTemplates.length)];
@@ -389,8 +392,12 @@
           timestamp: timestamp
         };
         
-        fsv.append(newMessage);
+        newMessages.push(newMessage);
       }
+      
+      // 使用 appendBatch 批量添加，只触发一次更新
+      fsv.appendBatch(newMessages);
+      
       console.timeEnd('加载更多消息');
       alert('已添加 1000 条消息！');
     }
