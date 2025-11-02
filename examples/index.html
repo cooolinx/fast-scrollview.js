@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FastScrollView - 示例索引</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 40px 20px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      color: white;
+      margin-bottom: 50px;
+    }
+
+    h1 {
+      font-size: 56px;
+      margin-bottom: 10px;
+      text-shadow: 0 2px 20px rgba(0,0,0,0.2);
+    }
+
+    .subtitle {
+      font-size: 20px;
+      opacity: 0.95;
+      margin-bottom: 20px;
+    }
+
+    .features {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .feature {
+      background: rgba(255,255,255,0.2);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      backdrop-filter: blur(10px);
+    }
+
+    .examples-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 30px;
+      margin-bottom: 40px;
+    }
+
+    .example-card {
+      background: white;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      transition: transform 0.3s, box-shadow 0.3s;
+      cursor: pointer;
+    }
+
+    .example-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 50px rgba(0,0,0,0.3);
+    }
+
+    .example-icon {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      height: 150px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 64px;
+    }
+
+    .example-card:nth-child(2) .example-icon {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    .example-card:nth-child(3) .example-icon {
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+
+    .example-content {
+      padding: 25px;
+    }
+
+    .example-title {
+      font-size: 24px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 10px;
+    }
+
+    .example-description {
+      font-size: 14px;
+      color: #666;
+      line-height: 1.6;
+      margin-bottom: 15px;
+    }
+
+    .example-stats {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+
+    .stat {
+      background: #f5f5f5;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #667eea;
+      font-weight: 600;
+    }
+
+    .view-button {
+      display: inline-block;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+
+    .view-button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .info-section {
+      background: white;
+      border-radius: 16px;
+      padding: 30px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      margin-bottom: 30px;
+    }
+
+    .info-title {
+      font-size: 28px;
+      color: #333;
+      margin-bottom: 20px;
+      font-weight: 600;
+    }
+
+    .info-content {
+      color: #666;
+      line-height: 1.8;
+      font-size: 16px;
+    }
+
+    .code-block {
+      background: #2d2d2d;
+      color: #f8f8f2;
+      padding: 20px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 20px 0;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .highlight {
+      color: #a6e22e;
+    }
+
+    .api-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    .api-item {
+      background: #f5f5f5;
+      padding: 15px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+    }
+
+    .api-name {
+      font-family: 'Courier New', monospace;
+      color: #667eea;
+      font-weight: 600;
+      font-size: 16px;
+    }
+
+    .api-desc {
+      color: #666;
+      font-size: 14px;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>⚡ FastScrollView</h1>
+      <div class="subtitle">高性能虚拟滚动库 - 支持海量数据和动态高度</div>
+      <div class="features">
+        <div class="feature">✨ 虚拟滚动</div>
+        <div class="feature">📏 动态高度</div>
+        <div class="feature">🚀 超高性能</div>
+        <div class="feature">💪 10万+数据</div>
+        <div class="feature">🎯 Vanilla JS</div>
+      </div>
+    </header>
+
+    <div class="examples-grid">
+      <div class="example-card" onclick="location.href='basic.html'">
+        <div class="example-icon">📋</div>
+        <div class="example-content">
+          <div class="example-title">基础示例</div>
+          <div class="example-description">
+            展示 10万条数据的流畅滚动，演示所有核心 API 方法的使用。
+          </div>
+          <div class="example-stats">
+            <div class="stat">100,000 条数据</div>
+            <div class="stat">均匀高度</div>
+          </div>
+          <a href="basic.html" class="view-button">查看示例 →</a>
+        </div>
+      </div>
+
+      <div class="example-card" onclick="location.href='dynamic-height.html'">
+        <div class="example-icon">📏</div>
+        <div class="example-content">
+          <div class="example-title">动态高度示例</div>
+          <div class="example-description">
+            展示不同高度的卡片（小、中、大），验证动态高度测量和缓存功能。
+          </div>
+          <div class="example-stats">
+            <div class="stat">20,000 条数据</div>
+            <div class="stat">动态高度</div>
+          </div>
+          <a href="dynamic-height.html" class="view-button">查看示例 →</a>
+        </div>
+      </div>
+
+      <div class="example-card" onclick="location.href='chat-app.html'">
+        <div class="example-icon">💬</div>
+        <div class="example-content">
+          <div class="example-title">聊天应用示例</div>
+          <div class="example-description">
+            模拟真实的聊天应用场景，展示 5万条消息的流畅滚动和实时交互。
+          </div>
+          <div class="example-stats">
+            <div class="stat">50,000 条消息</div>
+            <div class="stat">实时交互</div>
+          </div>
+          <a href="chat-app.html" class="view-button">查看示例 →</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="info-section">
+      <div class="info-title">🎯 快速开始</div>
+      <div class="info-content">
+        <p style="margin-bottom: 15px;">使用 FastScrollView 只需三个步骤：</p>
+        <div class="code-block">
+<span class="highlight">// 1. 准备数据</span>
+const items = [ /* 你的数据数组，可以是 10万+ 条 */ ];
+
+<span class="highlight">// 2. 定义渲染函数</span>
+function render(item, index, totalSize) {
+  const div = document.createElement('div');
+  div.textContent = `项目 ${index}: ${item.title}`;
+  return div;
+}
+
+<span class="highlight">// 3. 创建实例</span>
+const fsv = new FastScrollView(
+  '#container',  // 容器
+  items,         // 数据
+  render         // 渲染函数
+);
+        </div>
+      </div>
+    </div>
+
+    <div class="info-section">
+      <div class="info-title">📚 核心 API</div>
+      <div class="info-content">
+        <ul class="api-list">
+          <li class="api-item">
+            <div class="api-name">setItems(items)</div>
+            <div class="api-desc">设置新的数据数组</div>
+          </li>
+          <li class="api-item">
+            <div class="api-name">setItem(index, item)</div>
+            <div class="api-desc">更新指定索引的数据项</div>
+          </li>
+          <li class="api-item">
+            <div class="api-name">insertItem(index, item)</div>
+            <div class="api-desc">在指定位置插入数据项</div>
+          </li>
+          <li class="api-item">
+            <div class="api-name">append(item)</div>
+            <div class="api-desc">在末尾添加数据项</div>
+          </li>
+          <li class="api-item">
+            <div class="api-name">prepend(item)</div>
+            <div class="api-desc">在开头添加数据项</div>
+          </li>
+          <li class="api-item">
+            <div class="api-name">remove(itemOrIndex)</div>
+            <div class="api-desc">删除指定的数据项</div>
+          </li>
+          <li class="api-item">
+            <div class="api-name">scrollToTop()</div>
+            <div class="api-desc">滚动到顶部</div>
+          </li>
+          <li class="api-item">
+            <div class="api-name">scrollToBottom()</div>
+            <div class="api-desc">滚动到底部</div>
+          </li>
+          <li class="api-item">
+            <div class="api-name">scrollToItem(itemOrIndex)</div>
+            <div class="api-desc">滚动到指定的数据项</div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+

@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>聊天应用示例 - FastScrollView</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #e5ddd5;
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      color: #075e54;
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 32px;
+    }
+
+    .chat-container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+
+    .chat-header {
+      background: #075e54;
+      color: white;
+      padding: 15px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .chat-title {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .chat-info {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+
+    #scroll-container {
+      height: 500px;
+      background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect fill="%23e5ddd5" width="100" height="100"/></svg>');
+      overflow: auto;
+      padding: 10px;
+    }
+
+    .message {
+      margin-bottom: 12px;
+      display: flex;
+      animation: fadeIn 0.3s ease-in;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .message-sent {
+      justify-content: flex-end;
+    }
+
+    .message-received {
+      justify-content: flex-start;
+    }
+
+    .message-bubble {
+      max-width: 70%;
+      padding: 8px 12px;
+      border-radius: 8px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+      position: relative;
+    }
+
+    .message-sent .message-bubble {
+      background: #dcf8c6;
+      border-bottom-right-radius: 2px;
+    }
+
+    .message-received .message-bubble {
+      background: white;
+      border-bottom-left-radius: 2px;
+    }
+
+    .message-text {
+      font-size: 14px;
+      line-height: 1.5;
+      color: #303030;
+      word-wrap: break-word;
+    }
+
+    .message-time {
+      font-size: 11px;
+      color: #667781;
+      margin-top: 4px;
+      text-align: right;
+    }
+
+    .message-sender {
+      font-size: 12px;
+      color: #667781;
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+
+    .chat-input-container {
+      background: #f0f0f0;
+      padding: 15px;
+      display: flex;
+      gap: 10px;
+    }
+
+    .chat-input {
+      flex: 1;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 24px;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .chat-input:focus {
+      border-color: #075e54;
+    }
+
+    .send-button {
+      background: #075e54;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 24px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .send-button:hover {
+      background: #128c7e;
+    }
+
+    .controls {
+      margin-top: 15px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .control-button {
+      background: #075e54;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .control-button:hover {
+      background: #128c7e;
+    }
+
+    .loading-messages {
+      text-align: center;
+      padding: 20px;
+      color: #667781;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>💬 聊天应用示例</h1>
+
+    <div class="chat-container">
+      <div class="chat-header">
+        <div>
+          <div class="chat-title">群聊 (50,000 条消息)</div>
+          <div class="chat-info">在线 · 虚拟滚动演示</div>
+        </div>
+      </div>
+
+      <div id="scroll-container"></div>
+
+      <div class="chat-input-container">
+        <input 
+          type="text" 
+          class="chat-input" 
+          placeholder="输入消息..." 
+          id="message-input"
+          onkeypress="if(event.key==='Enter') sendMessage()"
+        >
+        <button class="send-button" onclick="sendMessage()">发送</button>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="control-button" onclick="scrollToTop()">⬆️ 最早消息</button>
+      <button class="control-button" onclick="scrollToBottom()">⬇️ 最新消息</button>
+      <button class="control-button" onclick="loadMoreMessages()">📥 加载 1000 条</button>
+      <button class="control-button" onclick="jumpToMiddle()">🎯 跳到中间</button>
+      <button class="control-button" onclick="scrollToMessage()">🔍 跳到指定消息</button>
+    </div>
+  </div>
+
+  <script src="../dist/fast-scrollview.min.js"></script>
+  <script>
+    // 模拟用户列表
+    const users = [
+      { name: '张三', color: '#dcf8c6' },
+      { name: '李四', color: '#fff' },
+      { name: '王五', color: '#fff' },
+      { name: '赵六', color: '#fff' },
+      { name: '孙七', color: '#fff' },
+      { name: '我', color: '#dcf8c6', isSelf: true }
+    ];
+
+    // 模拟消息内容
+    const messageTemplates = [
+      '你好！',
+      '今天天气不错',
+      '有人在吗？',
+      '刚才说的那个怎么样？',
+      '哈哈哈哈',
+      '👍👍👍',
+      '收到了，谢谢！',
+      '好的，知道了',
+      '这个想法不错',
+      '我也这么认为',
+      '大家都在忙什么呢？',
+      '晚上一起吃饭吧',
+      '这个项目进展如何？',
+      '需要帮忙吗？',
+      '😊😊😊',
+      '等一下，我马上来',
+      '没问题的',
+      '可以的',
+      '这个功能很棒！',
+      '性能真的很好，滚动超级流畅！'
+    ];
+
+    // 生成消息数据
+    let messages = [];
+    const INITIAL_MESSAGE_COUNT = 50000;
+
+    console.time('生成消息数据');
+    for (let i = 0; i < INITIAL_MESSAGE_COUNT; i++) {
+      const user = users[Math.floor(Math.random() * users.length)];
+      const template = messageTemplates[Math.floor(Math.random() * messageTemplates.length)];
+      const timestamp = new Date(Date.now() - (INITIAL_MESSAGE_COUNT - i) * 60000);
+      
+      messages.push({
+        id: i,
+        user: user,
+        text: template,
+        time: timestamp.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+        timestamp: timestamp
+      });
+    }
+    console.timeEnd('生成消息数据');
+
+    // 渲染消息
+    function renderMessage(message, index, totalSize) {
+      const div = document.createElement('div');
+      div.className = `message ${message.user.isSelf ? 'message-sent' : 'message-received'}`;
+      
+      const bubble = document.createElement('div');
+      bubble.className = 'message-bubble';
+      
+      let html = '';
+      if (!message.user.isSelf) {
+        html += `<div class="message-sender">${message.user.name}</div>`;
+      }
+      html += `<div class="message-text">${message.text}</div>`;
+      html += `<div class="message-time">${message.time}</div>`;
+      
+      bubble.innerHTML = html;
+      div.appendChild(bubble);
+      
+      return div;
+    }
+
+    // 创建 FastScrollView 实例
+    console.time('初始化聊天滚动');
+    const fsv = new FastScrollView(
+      '#scroll-container',
+      messages,
+      renderMessage,
+      {
+        estimatedItemHeight: 60,
+        bufferSize: 5,
+        onScroll: (info) => {
+          // 可以在这里添加滚动事件处理
+        }
+      }
+    );
+    console.timeEnd('初始化聊天滚动');
+
+    // 自动滚动到底部（最新消息）
+    setTimeout(() => {
+      fsv.scrollToBottom();
+    }, 100);
+
+    // 控制函数
+    function scrollToTop() {
+      fsv.scrollToTop();
+    }
+
+    function scrollToBottom() {
+      fsv.scrollToBottom();
+    }
+
+    function jumpToMiddle() {
+      const middleIndex = Math.floor(messages.length / 2);
+      fsv.scrollToItem(middleIndex);
+    }
+
+    function scrollToMessage() {
+      const input = prompt('输入消息索引 (0 - ' + (messages.length - 1) + '):', '1000');
+      if (input !== null) {
+        const index = parseInt(input);
+        if (!isNaN(index) && index >= 0 && index < messages.length) {
+          fsv.scrollToItem(index);
+        } else {
+          alert('无效的索引');
+        }
+      }
+    }
+
+    function sendMessage() {
+      const input = document.getElementById('message-input');
+      const text = input.value.trim();
+      
+      if (text) {
+        const newMessage = {
+          id: Date.now(),
+          user: users.find(u => u.isSelf),
+          text: text,
+          time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+          timestamp: new Date()
+        };
+        
+        fsv.append(newMessage);
+        input.value = '';
+        
+        // 滚动到底部查看新消息
+        setTimeout(() => {
+          fsv.scrollToBottom();
+        }, 50);
+      }
+    }
+
+    function loadMoreMessages() {
+      console.time('加载更多消息');
+      for (let i = 0; i < 1000; i++) {
+        const user = users[Math.floor(Math.random() * users.length)];
+        const template = messageTemplates[Math.floor(Math.random() * messageTemplates.length)];
+        const timestamp = new Date();
+        
+        const newMessage = {
+          id: Date.now() + i,
+          user: user,
+          text: template,
+          time: timestamp.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }),
+          timestamp: timestamp
+        };
+        
+        fsv.append(newMessage);
+      }
+      console.timeEnd('加载更多消息');
+      alert('已添加 1000 条消息！');
+    }
+
+    console.log('聊天应用已初始化');
+    console.log(`消息总数: ${messages.length.toLocaleString()} 条`);
+    console.log(`DOM 中实际渲染: ~${fsv.getVisibleRange().count} 个消息元素`);
+  </script>
+</body>
+</html>
+

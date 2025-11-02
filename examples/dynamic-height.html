@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>动态高度示例 - FastScrollView</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      color: white;
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 36px;
+    }
+
+    .controls {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 15px;
+    }
+
+    button {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
+    }
+
+    .info {
+      font-size: 14px;
+      color: #333;
+      background: #fff3cd;
+      padding: 15px;
+      border-radius: 8px;
+      border-left: 4px solid #f5576c;
+    }
+
+    .scroll-wrapper {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+
+    #scroll-container {
+      height: 600px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      overflow: auto;
+    }
+
+    /* 不同高度的卡片样式 */
+    .card-small {
+      padding: 15px 20px;
+      margin-bottom: 10px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .card-medium {
+      padding: 25px 20px;
+      margin-bottom: 10px;
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .card-large {
+      padding: 35px 20px;
+      margin-bottom: 10px;
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+      color: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .card-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .card-content {
+      font-size: 14px;
+      line-height: 1.6;
+      opacity: 0.9;
+    }
+
+    .card-meta {
+      margin-top: 10px;
+      font-size: 12px;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📏 动态高度示例</h1>
+
+    <div class="controls">
+      <div class="button-group">
+        <button onclick="scrollToTop()">滚动到顶部</button>
+        <button onclick="scrollToBottom()">滚动到底部</button>
+        <button onclick="scrollToItem(5000)">滚动到 #5000</button>
+        <button onclick="scrollToItem(10000)">滚动到 #10000</button>
+        <button onclick="addRandomCard()">添加随机卡片</button>
+        <button onclick="fsv.refresh()">刷新高度</button>
+      </div>
+
+      <div class="info">
+        <strong>💡 说明:</strong> 此示例展示了不同高度的卡片（小、中、大），FastScrollView 会自动测量并缓存每个元素的实际高度，确保滚动位置的准确性。
+      </div>
+    </div>
+
+    <div class="scroll-wrapper">
+      <div id="scroll-container"></div>
+    </div>
+  </div>
+
+  <script src="../dist/fast-scrollview.min.js"></script>
+  <script>
+    // 生成不同高度的测试数据
+    const cardTypes = ['small', 'medium', 'large'];
+    const cardContents = {
+      small: '这是一个小卡片，内容比较简短。',
+      medium: '这是一个中等大小的卡片，包含更多的内容信息。可以显示更详细的描述和说明文字。',
+      large: '这是一个大卡片，包含丰富的内容。可以显示完整的文章摘要、详细的产品描述或者多行的用户评论。这种卡片适合展示重要信息或者需要突出显示的内容。'
+    };
+
+    let items = [];
+    const DATA_SIZE = 20000;
+
+    console.time('生成动态高度数据');
+    for (let i = 0; i < DATA_SIZE; i++) {
+      const type = cardTypes[Math.floor(Math.random() * cardTypes.length)];
+      items.push({
+        id: i,
+        type: type,
+        title: `${type.toUpperCase()} 卡片 #${i + 1}`,
+        content: cardContents[type],
+        timestamp: new Date(Date.now() - Math.random() * 10000000000).toLocaleString()
+      });
+    }
+    console.timeEnd('生成动态高度数据');
+
+    // 渲染函数 - 根据类型返回不同高度的元素
+    function renderItem(item, index, totalSize) {
+      const div = document.createElement('div');
+      div.className = `card-${item.type}`;
+      div.innerHTML = `
+        <div class="card-title">${item.title}</div>
+        <div class="card-content">${item.content}</div>
+        <div class="card-meta">索引: ${index} | 类型: ${item.type} | ${item.timestamp}</div>
+      `;
+      return div;
+    }
+
+    // 创建 FastScrollView 实例
+    console.time('初始化虚拟滚动');
+    const fsv = new FastScrollView(
+      '#scroll-container',
+      items,
+      renderItem,
+      {
+        estimatedItemHeight: 80, // 预估高度
+        bufferSize: 3
+      }
+    );
+    console.timeEnd('初始化虚拟滚动');
+
+    // 控制函数
+    function scrollToTop() {
+      fsv.scrollToTop();
+    }
+
+    function scrollToBottom() {
+      fsv.scrollToBottom();
+    }
+
+    function scrollToItem(index) {
+      if (index >= 0 && index < items.length) {
+        fsv.scrollToItem(index);
+        setTimeout(() => {
+          alert(`已滚动到 #${index}`);
+        }, 100);
+      }
+    }
+
+    function addRandomCard() {
+      const type = cardTypes[Math.floor(Math.random() * cardTypes.length)];
+      const newItem = {
+        id: Date.now(),
+        type: type,
+        title: `新${type.toUpperCase()}卡片 #${items.length + 1}`,
+        content: cardContents[type],
+        timestamp: new Date().toLocaleString()
+      };
+      fsv.append(newItem);
+      alert('已添加新卡片，可滚动到底部查看');
+    }
+
+    console.log(`FastScrollView 已初始化`);
+    console.log(`总数据量: ${items.length.toLocaleString()} 条`);
+    console.log(`包含不同高度的卡片: small, medium, large`);
+  </script>
+</body>
+</html>
+

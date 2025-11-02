@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>基础示例 - 10万条数据 - FastScrollView</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      color: white;
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 36px;
+    }
+
+    .controls {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 15px;
+    }
+
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .info {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+      font-size: 14px;
+      color: #333;
+    }
+
+    .info-item {
+      background: #f5f5f5;
+      padding: 10px;
+      border-radius: 6px;
+    }
+
+    .info-label {
+      font-weight: 600;
+      color: #667eea;
+    }
+
+    .scroll-wrapper {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+
+    #scroll-container {
+      height: 600px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      overflow: auto;
+    }
+
+    .list-item {
+      padding: 15px 20px;
+      border-bottom: 1px solid #e0e0e0;
+      transition: background 0.2s;
+    }
+
+    .list-item:hover {
+      background: #f5f5f5;
+    }
+
+    .item-index {
+      font-weight: 600;
+      color: #667eea;
+      margin-right: 10px;
+    }
+
+    .item-content {
+      color: #333;
+    }
+
+    .performance-stats {
+      margin-top: 20px;
+      padding: 15px;
+      background: #e8f5e9;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #2e7d32;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>⚡ 基础示例 - 10万条数据</h1>
+
+    <div class="controls">
+      <div class="button-group">
+        <button onclick="scrollToTop()">滚动到顶部</button>
+        <button onclick="scrollToBottom()">滚动到底部</button>
+        <button onclick="scrollToMiddle()">滚动到中间</button>
+        <button onclick="scrollToRandom()">滚动到随机位置</button>
+        <button onclick="addItem()">添加一条数据</button>
+        <button onclick="prependItem()">在开头插入</button>
+        <button onclick="removeItem()">删除一条数据</button>
+        <button onclick="updateItem()">更新一条数据</button>
+      </div>
+
+      <div class="info">
+        <div class="info-item">
+          <span class="info-label">总数据量:</span>
+          <span id="total-count">0</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">当前可见范围:</span>
+          <span id="visible-range">0 - 0</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">渲染数量:</span>
+          <span id="rendered-count">0</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">滚动位置:</span>
+          <span id="scroll-position">0px</span>
+        </div>
+      </div>
+
+      <div class="performance-stats">
+        <strong>✅ 性能优势:</strong> 即使有 100,000 条数据，DOM 中只渲染可见区域的元素（约 20-30 个），确保流畅的滚动性能！
+      </div>
+    </div>
+
+    <div class="scroll-wrapper">
+      <div id="scroll-container"></div>
+    </div>
+  </div>
+
+  <script src="../dist/fast-scrollview.min.js"></script>
+  <script>
+    // 生成 10万 条测试数据
+    const DATA_SIZE = 100000;
+    let items = [];
+
+    console.time('生成数据');
+    for (let i = 0; i < DATA_SIZE; i++) {
+      items.push({
+        id: i,
+        title: `数据项 ${i + 1}`,
+        description: `这是第 ${i + 1} 条数据的描述信息`
+      });
+    }
+    console.timeEnd('生成数据');
+
+    // 渲染函数
+    function renderItem(item, index, totalSize) {
+      const div = document.createElement('div');
+      div.className = 'list-item';
+      div.innerHTML = `
+        <span class="item-index">#${index + 1}</span>
+        <span class="item-content">${item.title} - ${item.description}</span>
+      `;
+      return div;
+    }
+
+    // 创建 FastScrollView 实例
+    console.time('初始化虚拟滚动');
+    const fsv = new FastScrollView(
+      '#scroll-container',
+      items,
+      renderItem,
+      {
+        estimatedItemHeight: 50,
+        bufferSize: 5,
+        onScroll: (info) => {
+          updateInfo();
+        }
+      }
+    );
+    console.timeEnd('初始化虚拟滚动');
+
+    // 更新信息显示
+    function updateInfo() {
+      const range = fsv.getVisibleRange();
+      document.getElementById('total-count').textContent = fsv.getItemCount().toLocaleString();
+      document.getElementById('visible-range').textContent = `${range.start} - ${range.end}`;
+      document.getElementById('rendered-count').textContent = range.count;
+      document.getElementById('scroll-position').textContent = Math.round(fsv.getScrollTop()) + 'px';
+    }
+
+    // 控制函数
+    function scrollToTop() {
+      fsv.scrollToTop();
+    }
+
+    function scrollToBottom() {
+      fsv.scrollToBottom();
+    }
+
+    function scrollToMiddle() {
+      const middleIndex = Math.floor(items.length / 2);
+      fsv.scrollToItem(middleIndex);
+    }
+
+    function scrollToRandom() {
+      const randomIndex = Math.floor(Math.random() * items.length);
+      fsv.scrollToItem(randomIndex);
+      alert(`已滚动到索引: ${randomIndex}`);
+    }
+
+    function addItem() {
+      const newItem = {
+        id: Date.now(),
+        title: `新数据项 ${items.length + 1}`,
+        description: `这是新添加的数据 - ${new Date().toLocaleTimeString()}`
+      };
+      fsv.append(newItem);
+      updateInfo();
+      alert('已在末尾添加一条数据');
+    }
+
+    function prependItem() {
+      const newItem = {
+        id: Date.now(),
+        title: `插入的数据项`,
+        description: `这是在开头插入的数据 - ${new Date().toLocaleTimeString()}`
+      };
+      fsv.prepend(newItem);
+      updateInfo();
+      alert('已在开头插入一条数据');
+    }
+
+    function removeItem() {
+      if (items.length > 0) {
+        const randomIndex = Math.floor(Math.random() * items.length);
+        fsv.remove(randomIndex);
+        updateInfo();
+        alert(`已删除索引 ${randomIndex} 的数据`);
+      }
+    }
+
+    function updateItem() {
+      const randomIndex = Math.floor(Math.random() * items.length);
+      const updatedItem = {
+        id: items[randomIndex].id,
+        title: `已更新的数据项 ${randomIndex + 1}`,
+        description: `此数据已被更新 - ${new Date().toLocaleTimeString()}`
+      };
+      fsv.setItem(randomIndex, updatedItem);
+      updateInfo();
+      alert(`已更新索引 ${randomIndex} 的数据`);
+    }
+
+    // 初始化信息显示
+    updateInfo();
+
+    // 性能监控
+    console.log('FastScrollView 已初始化');
+    console.log(`总数据量: ${items.length.toLocaleString()} 条`);
+    console.log(`DOM 中实际渲染: ~${fsv.getVisibleRange().count} 个元素`);
+  </script>
+</body>
+</html>
+
