@@ -554,18 +554,18 @@ class FastScrollView {
   }
 
   /**
-   * 滚动到底部（内部调用 scrollToItem）
+   * 滚动到底部
+   * 从最后一项开始向前渲染，填满屏幕后滚动到真正的底部
    */
   scrollToBottom() {
-    if (this.items.length === 0) return;
-    this.scrollToItem(this.items.length - 1);
+    this.scrollToItem(this.items.length - 1, isBottom);
   }
 
   /**
    * 滚动到指定项
    * @param {*|number} itemOrIndex - 数据项或索引
    */
-  scrollToItem(itemOrIndex) {
+  scrollToItem(itemOrIndex, isBottom = false) {
     let targetIndex;
     
     if (typeof itemOrIndex === 'number') {
@@ -651,7 +651,7 @@ class FastScrollView {
     
     // 滚动到目标位置（topSpacer高度 + 目标项之前的内容高度）
     requestAnimationFrame(() => {
-      const targetScrollTop = this.topSpacer.offsetHeight + prependHeight;
+      const targetScrollTop = isBottom ? this.container.scrollHeight : this.topSpacer.offsetHeight + prependHeight;
       this.container.scrollTop = targetScrollTop;
       
       requestAnimationFrame(() => {
