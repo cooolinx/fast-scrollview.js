@@ -1,6 +1,12 @@
 /**
- * FastScrollView - 高性能虚拟滚动库，支持大量数据和动态高度
- * 采用按需渲染策略：不预先计算高度，从可视区域开始逐个渲染直到填满屏幕
+ * FastScrollView - 高性能虚拟滚动库
+ * 
+ * 核心特性：
+ * - 跳跃式按需渲染：可以从任意位置开始渲染，无需预先计算
+ * - 双向扩展：向上或向下滚动时自动追加新元素
+ * - 智能缓存：已测量的元素高度自动缓存
+ * - 零跳动：精心设计的占位符管理策略
+ * 
  * @class
  */
 class FastScrollView {
@@ -10,8 +16,8 @@ class FastScrollView {
    * @param {Array} items - 要渲染的数据数组
    * @param {Function} render - 渲染函数 (item, index, totalSize) => HTMLElement | string
    * @param {Object} options - 可选配置
-   * @param {number} options.estimatedItemHeight - 预估行高（默认50px，仅用于估算）
-   * @param {number} options.bufferSize - 缓冲区大小（默认3，表示上下额外渲染的元素数量）
+   * @param {number} options.estimatedItemHeight - 预估行高（默认50px，仅用于估算未渲染元素）
+   * @param {number} options.bufferThreshold - 缓冲阈值（默认2，表示提前2个屏幕高度触发渲染）
    * @param {Function} options.onScroll - 滚动回调
    */
   constructor(container, items = [], render = null, options = {}) {
@@ -28,10 +34,11 @@ class FastScrollView {
       throw new Error('FastScrollView: Render function is required');
     }
 
-    // 配置
+    // 配置（支持向后兼容）
     this.options = {
       estimatedItemHeight: options.estimatedItemHeight || 50,
-      bufferSize: options.bufferSize || 3,
+      // bufferThreshold 和 bufferSize 都支持（向后兼容）
+      bufferThreshold: options.bufferThreshold || options.bufferSize || 2,
       onScroll: options.onScroll || null,
     };
 
@@ -47,7 +54,6 @@ class FastScrollView {
     this.renderedEndIndex = -1;
 
     // DOM 元素
-    this.scrollContainer = null;
     this.contentContainer = null;
     this.topSpacer = null;
     this.bottomSpacer = null;
@@ -76,10 +82,6 @@ class FastScrollView {
     this.container.style.overflow = 'auto';
     this.container.style.position = 'relative';
 
-    // 创建滚动容器（使用传统的三层结构，更稳定）
-    this.scrollContainer = document.createElement('div');
-    this.scrollContainer.style.width = '100%';
-
     // 创建顶部占位符
     this.topSpacer = document.createElement('div');
     this.topSpacer.style.height = '0px';
@@ -91,13 +93,12 @@ class FastScrollView {
     this.bottomSpacer = document.createElement('div');
     this.bottomSpacer.style.height = '0px';
 
-    // 组装 DOM
-    this.scrollContainer.appendChild(this.topSpacer);
-    this.scrollContainer.appendChild(this.contentContainer);
-    this.scrollContainer.appendChild(this.bottomSpacer);
-    this.container.appendChild(this.scrollContainer);
+    // 组装 DOM（直接添加到 container）
+    this.container.appendChild(this.topSpacer);
+    this.container.appendChild(this.contentContainer);
+    this.container.appendChild(this.bottomSpacer);
 
-    // 绑定滚动事件（保存引用以便后续正确移除）
+    // 绑定滚动事件
     this.boundHandleScroll = this.handleScroll.bind(this);
     this.container.addEventListener('scroll', this.boundHandleScroll);
 
@@ -143,6 +144,19 @@ class FastScrollView {
   }
 
   /**
+   * 获取指定范围的累计高度
+   */
+  getHeightSum(startIndex, endIndex) {
+    let total = 0;
+    for (let i = startIndex; i < endIndex; i++) {
+      const cached = this.renderedCache.get(i);
+      const height = cached ? cached.height : this.options.estimatedItemHeight;
+      total += height;
+    }
+    return total;
+  }
+
+  /**
    * 更新可视区域内的元素
    * 支持跳跃式渲染：可以从任意位置开始渲染
    */
@@ -167,23 +181,12 @@ class FastScrollView {
       return;
     }
 
-    // 计算当前已渲染区域的顶部和底部位置
-    let renderedTop = 0;
-    for (let i = 0; i < this.renderedStartIndex; i++) {
-      const cached = this.renderedCache.get(i);
-      const height = cached ? cached.height : this.options.estimatedItemHeight;
-      renderedTop += height;
-    }
-
-    let renderedBottom = renderedTop;
-    for (let i = this.renderedStartIndex; i < this.renderedEndIndex; i++) {
-      const cached = this.renderedCache.get(i);
-      const height = cached ? cached.height : this.options.estimatedItemHeight;
-      renderedBottom += height;
-    }
+    // 计算已渲染区域的位置
+    const renderedTop = this.getHeightSum(0, this.renderedStartIndex);
+    const renderedBottom = renderedTop + this.getHeightSum(this.renderedStartIndex, this.renderedEndIndex);
+    const expandThreshold = containerHeight * this.options.bufferThreshold;
 
     // 检查是否需要向下扩展
-    const expandThreshold = containerHeight * 2;
     if (scrollBottom + expandThreshold > renderedBottom && this.renderedEndIndex < this.items.length) {
       let targetIndex = this.renderedEndIndex;
       let currentHeight = renderedBottom;
@@ -195,7 +198,6 @@ class FastScrollView {
         targetIndex++;
       }
       
-      // 向下追加
       this.appendItems(this.renderedEndIndex, targetIndex);
       this.renderedEndIndex = targetIndex;
     }
@@ -214,7 +216,6 @@ class FastScrollView {
       
       targetIndex = Math.max(0, targetIndex + 1);
       
-      // 向上追加
       this.prependItems(targetIndex, this.renderedStartIndex);
       this.renderedStartIndex = targetIndex;
     }
@@ -233,8 +234,9 @@ class FastScrollView {
    */
   renderFromPosition(scrollTop) {
     const containerHeight = this.container.clientHeight;
+    const expandThreshold = containerHeight * this.options.bufferThreshold;
     
-    // 找到起始索引
+    // 找到起始索引（第一个底部超过 scrollTop 的元素）
     let currentTop = 0;
     let startIndex = 0;
     
@@ -250,19 +252,19 @@ class FastScrollView {
       startIndex++;
     }
 
-    // 计算结束索引
+    // 计算结束索引（渲染到可视区域底部 + 缓冲阈值）
     let endIndex = startIndex;
     let currentHeight = currentTop;
-    const expandThreshold = containerHeight * 2;
+    const targetHeight = scrollTop + containerHeight + expandThreshold;
     
-    while (endIndex < this.items.length && currentHeight < scrollTop + containerHeight + expandThreshold) {
+    while (endIndex < this.items.length && currentHeight < targetHeight) {
       const cached = this.renderedCache.get(endIndex);
       const height = cached ? cached.height : this.options.estimatedItemHeight;
       currentHeight += height;
       endIndex++;
     }
 
-    // 渲染这个范围
+    // 设置渲染范围并渲染
     this.renderedStartIndex = startIndex;
     this.renderedEndIndex = endIndex;
     
@@ -275,29 +277,20 @@ class FastScrollView {
    * 更新占位符高度
    */
   updateSpacers() {
-    // 计算 topSpacer
-    let topHeight = 0;
-    for (let i = 0; i < this.renderedStartIndex; i++) {
-      const cached = this.renderedCache.get(i);
-      const height = cached ? cached.height : this.options.estimatedItemHeight;
-      topHeight += height;
-    }
+    const topHeight = this.getHeightSum(0, this.renderedStartIndex);
+    const bottomHeight = this.getHeightSum(this.renderedEndIndex, this.items.length);
+    
     this.topSpacer.style.height = `${topHeight}px`;
-
-    // 计算 bottomSpacer
-    let bottomHeight = 0;
-    for (let i = this.renderedEndIndex; i < this.items.length; i++) {
-      const cached = this.renderedCache.get(i);
-      const height = cached ? cached.height : this.options.estimatedItemHeight;
-      bottomHeight += height;
-    }
     this.bottomSpacer.style.height = `${bottomHeight}px`;
   }
 
   /**
-   * 追加新元素到列表末尾
+   * 渲染指定范围的元素
+   * @param {number} startIndex - 起始索引
+   * @param {number} endIndex - 结束索引
+   * @param {boolean} prepend - 是否插入到开头（默认追加到末尾）
    */
-  appendItems(startIndex, endIndex) {
+  renderItems(startIndex, endIndex, prepend = false) {
     const fragment = document.createDocumentFragment();
     const itemsToMeasure = [];
 
@@ -307,7 +300,6 @@ class FastScrollView {
 
       const itemElement = this.createItemElement(item, i);
       
-      // 如果没有缓存高度，需要测量
       if (!this.renderedCache.has(i)) {
         itemsToMeasure.push({ element: itemElement, index: i });
       }
@@ -315,40 +307,14 @@ class FastScrollView {
       fragment.appendChild(itemElement);
     }
 
-    // 追加到末尾
-    this.contentContainer.appendChild(fragment);
-
-    // 测量新创建的元素
-    if (itemsToMeasure.length > 0) {
-      this.measureHeights(itemsToMeasure);
-    }
-  }
-
-  /**
-   * 在列表开头插入新元素
-   */
-  prependItems(startIndex, endIndex) {
-    const fragment = document.createDocumentFragment();
-    const itemsToMeasure = [];
-
-    for (let i = startIndex; i < endIndex; i++) {
-      const item = this.items[i];
-      if (item === undefined) continue;
-
-      const itemElement = this.createItemElement(item, i);
-      
-      // 如果没有缓存高度，需要测量
-      if (!this.renderedCache.has(i)) {
-        itemsToMeasure.push({ element: itemElement, index: i });
+    // 插入到DOM
+    if (prepend) {
+      const firstChild = this.contentContainer.firstChild;
+      if (firstChild) {
+        this.contentContainer.insertBefore(fragment, firstChild);
+      } else {
+        this.contentContainer.appendChild(fragment);
       }
-      
-      fragment.appendChild(itemElement);
-    }
-
-    // 插入到开头
-    const firstChild = this.contentContainer.firstChild;
-    if (firstChild) {
-      this.contentContainer.insertBefore(fragment, firstChild);
     } else {
       this.contentContainer.appendChild(fragment);
     }
@@ -357,6 +323,20 @@ class FastScrollView {
     if (itemsToMeasure.length > 0) {
       this.measureHeights(itemsToMeasure);
     }
+  }
+
+  /**
+   * 追加元素到末尾（appendItems 的别名）
+   */
+  appendItems(startIndex, endIndex) {
+    this.renderItems(startIndex, endIndex, false);
+  }
+
+  /**
+   * 在开头插入元素（prependItems 的别名）
+   */
+  prependItems(startIndex, endIndex) {
+    this.renderItems(startIndex, endIndex, true);
   }
 
   /**
@@ -430,17 +410,16 @@ class FastScrollView {
   setItem(index, item) {
     if (index >= 0 && index < this.items.length) {
       this.items[index] = item;
-      // 清除该项的缓存
       this.renderedCache.delete(index);
       
-      // 如果这个item已经被渲染，需要重新渲染它
+      // 如果这个item已经被渲染，直接替换元素
       if (index >= this.renderedStartIndex && index < this.renderedEndIndex) {
         const existingElement = this.contentContainer.querySelector(`[data-index="${index}"]`);
         if (existingElement) {
           const newElement = this.createItemElement(item, index);
           existingElement.replaceWith(newElement);
           
-          // 测量新元素
+          // 测量新元素高度并更新缓存和占位符
           requestAnimationFrame(() => {
             const height = newElement.offsetHeight;
             if (height > 0) {
@@ -448,9 +427,11 @@ class FastScrollView {
               this.updateSpacers();
             }
           });
+          return; // 已经处理完成，不需要调用 updateVisibleItems
         }
       }
       
+      // 如果不在已渲染范围内，或者没找到元素，调用 updateVisibleItems
       if (!this.batchUpdateMode) {
         this.updateVisibleItems();
       } else {
@@ -549,10 +530,8 @@ class FastScrollView {
    */
   endUpdate() {
     this.batchUpdateMode = false;
-    if (this.pendingUpdate || true) {
-      this.updateVisibleItems();
-      this.pendingUpdate = false;
-    }
+    this.updateVisibleItems();
+    this.pendingUpdate = false;
   }
 
   /**
@@ -615,13 +594,8 @@ class FastScrollView {
     }
 
     if (index >= 0 && index < this.items.length) {
-      // 计算目标位置（基于缓存的高度）
-      let offset = 0;
-      for (let i = 0; i < index; i++) {
-        const cached = this.renderedCache.get(i);
-        const height = cached ? cached.height : this.options.estimatedItemHeight;
-        offset += height;
-      }
+      // 计算目标位置
+      const offset = this.getHeightSum(0, index);
       
       // 清空当前渲染，从目标位置重新渲染
       this.renderedStartIndex = -1;
@@ -667,6 +641,7 @@ class FastScrollView {
 
   /**
    * 获取总高度（估算值）
+   * 注意：此方法在大数据集下可能较慢，因为需要遍历所有元素
    */
   getTotalHeight() {
     let total = 0;
