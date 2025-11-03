@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>优化后的按需渲染测试 - FastScrollView</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      color: white;
+      text-align: center;
+      margin-bottom: 20px;
+      font-size: 36px;
+    }
+
+    .description {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+
+    .description h2 {
+      color: #667eea;
+      margin-bottom: 10px;
+    }
+
+    .description ul {
+      margin-left: 20px;
+      color: #333;
+      line-height: 1.8;
+    }
+
+    .controls {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 15px;
+    }
+
+    button {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+      font-size: 14px;
+      color: #333;
+      margin-top: 15px;
+    }
+
+    .stat-item {
+      background: #f5f5f5;
+      padding: 10px;
+      border-radius: 6px;
+    }
+
+    .stat-label {
+      font-weight: 600;
+      color: #667eea;
+    }
+
+    .scroll-wrapper {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+
+    #scroll-container {
+      height: 600px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      overflow: auto;
+    }
+
+    .card {
+      padding: 15px 20px;
+      border-bottom: 1px solid #e0e0e0;
+      transition: background 0.2s;
+    }
+
+    .card:hover {
+      background: #f5f5f5;
+    }
+
+    .card-small {
+      min-height: 60px;
+      background: #e3f2fd;
+    }
+
+    .card-medium {
+      min-height: 100px;
+      background: #f3e5f5;
+    }
+
+    .card-large {
+      min-height: 150px;
+      background: #fff3e0;
+    }
+
+    .card-title {
+      font-weight: 600;
+      color: #667eea;
+      margin-bottom: 5px;
+    }
+
+    .card-content {
+      color: #666;
+      line-height: 1.6;
+    }
+
+    .highlight {
+      background: #c8e6c9 !important;
+      animation: pulse 1s ease-in-out;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.02); }
+    }
+
+    .log {
+      margin-top: 15px;
+      padding: 10px;
+      background: #f5f5f5;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 12px;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+
+    .log-item {
+      padding: 3px 0;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .log-item:last-child {
+      border-bottom: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>⚡ 优化后的按需渲染测试</h1>
+
+    <div class="description">
+      <h2>✨ 新的优化策略</h2>
+      <ul>
+        <li><strong>不预先计算：</strong>不需要提前遍历所有元素计算高度和位置</li>
+        <li><strong>按需渲染：</strong>从当前滚动位置开始，逐个渲染元素直到填满屏幕</li>
+        <li><strong>智能缓存：</strong>已渲染的元素自动缓存，避免重复渲染</li>
+        <li><strong>简化跳转：</strong>跳转到某个item时，直接从该item开始渲染，不需要计算scroll值</li>
+        <li><strong>性能提升：</strong>初始化速度更快，滚动更流畅</li>
+      </ul>
+    </div>
+
+    <div class="controls">
+      <div class="button-group">
+        <button onclick="scrollToItem(0)">跳转到 #0 (顶部)</button>
+        <button onclick="scrollToItem(1000)">跳转到 #1000</button>
+        <button onclick="scrollToItem(5000)">跳转到 #5000</button>
+        <button onclick="scrollToItem(Math.floor(items.length / 2))">跳转到中间</button>
+        <button onclick="scrollToItem(items.length - 1)">跳转到最后 (底部)</button>
+        <button onclick="scrollToRandom()">🎲 随机跳转</button>
+        <button onclick="addItems()">➕ 添加100条</button>
+        <button onclick="clearCache()">🗑️ 清除缓存</button>
+      </div>
+
+      <div class="stats">
+        <div class="stat-item">
+          <span class="stat-label">总数据量:</span>
+          <span id="total-count">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">可见范围:</span>
+          <span id="visible-range">0 - 0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">DOM渲染数:</span>
+          <span id="rendered-count">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">缓存元素数:</span>
+          <span id="cache-count">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">滚动位置:</span>
+          <span id="scroll-position">0px</span>
+        </div>
+      </div>
+
+      <div class="log" id="log">
+        <div class="log-item">日志：等待操作...</div>
+      </div>
+    </div>
+
+    <div class="scroll-wrapper">
+      <div id="scroll-container"></div>
+    </div>
+  </div>
+
+  <script src="../dist/fast-scrollview.min.js"></script>
+  <script>
+    const log = [];
+    function addLog(message) {
+      const time = new Date().toLocaleTimeString();
+      log.unshift(`[${time}] ${message}`);
+      if (log.length > 20) log.pop();
+      
+      const logEl = document.getElementById('log');
+      logEl.innerHTML = log.map(l => `<div class="log-item">${l}</div>`).join('');
+    }
+
+    // 生成不同高度的测试数据
+    const cardTypes = ['small', 'medium', 'large'];
+    const cardContents = {
+      small: '这是一个小卡片，内容比较简短。',
+      medium: '这是一个中等大小的卡片，包含更多的内容信息。可以显示更详细的描述和说明文字。',
+      large: '这是一个大卡片，包含丰富的内容。可以显示完整的文章摘要、详细的产品描述或者多行的用户评论。这种卡片适合展示重要信息或者需要突出显示的内容，让用户能够快速获取关键信息。'
+    };
+
+    let items = [];
+    const DATA_SIZE = 10000;
+
+    addLog('开始生成数据...');
+    console.time('生成数据');
+    for (let i = 0; i < DATA_SIZE; i++) {
+      const type = cardTypes[i % 3]; // 循环使用三种类型
+      items.push({
+        id: i,
+        type: type,
+        title: `${type.toUpperCase()} 卡片 #${i}`,
+        content: cardContents[type]
+      });
+    }
+    console.timeEnd('生成数据');
+    addLog(`已生成 ${DATA_SIZE.toLocaleString()} 条数据`);
+
+    // 渲染函数
+    function renderItem(item, index, totalSize) {
+      const div = document.createElement('div');
+      div.className = `card card-${item.type}`;
+      div.innerHTML = `
+        <div class="card-title">${item.title} (索引: ${index})</div>
+        <div class="card-content">${item.content}</div>
+      `;
+      return div;
+    }
+
+    // 创建 FastScrollView 实例
+    addLog('初始化虚拟滚动...');
+    console.time('初始化');
+    const fsv = new FastScrollView(
+      '#scroll-container',
+      items,
+      renderItem,
+      {
+        estimatedItemHeight: 80,
+        bufferSize: 3,
+        onScroll: (info) => {
+          updateStats();
+        }
+      }
+    );
+    console.timeEnd('初始化');
+    addLog('✅ 初始化完成！按需渲染策略已启用');
+
+    // 更新统计信息
+    function updateStats() {
+      const range = fsv.getVisibleRange();
+      document.getElementById('total-count').textContent = fsv.getItemCount().toLocaleString();
+      document.getElementById('visible-range').textContent = `${range.start} - ${range.end}`;
+      document.getElementById('rendered-count').textContent = range.count;
+      document.getElementById('cache-count').textContent = fsv.renderedCache.size;
+      document.getElementById('scroll-position').textContent = Math.round(fsv.getScrollTop()) + 'px';
+    }
+
+    // 控制函数
+    function scrollToItem(index) {
+      addLog(`跳转到索引: ${index}`);
+      fsv.scrollToItem(index);
+      setTimeout(updateStats, 100);
+    }
+
+    function scrollToRandom() {
+      const random = Math.floor(Math.random() * items.length);
+      addLog(`随机跳转到索引: ${random}`);
+      fsv.scrollToItem(random);
+      updateStats();
+    }
+
+    function addItems() {
+      const startIndex = items.length;
+      for (let i = 0; i < 100; i++) {
+        const type = cardTypes[Math.floor(Math.random() * 3)];
+        const item = {
+          id: startIndex + i,
+          type: type,
+          title: `新${type.toUpperCase()}卡片 #${startIndex + i}`,
+          content: cardContents[type]
+        };
+        fsv.append(item);
+      }
+      addLog(`添加了 100 条新数据，总数: ${fsv.getItemCount()}`);
+      updateStats();
+    }
+
+    function clearCache() {
+      const oldSize = fsv.renderedCache.size;
+      fsv.refresh();
+      addLog(`清除了 ${oldSize} 个缓存元素`);
+      updateStats();
+    }
+
+    // 初始化统计
+    updateStats();
+
+    // 性能监控
+    addLog(`📊 DOM中仅渲染 ${fsv.getVisibleRange().count} 个元素`);
+  </script>
+</body>
+</html>
+

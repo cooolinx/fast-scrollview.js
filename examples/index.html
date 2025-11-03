@@ -95,6 +95,14 @@
       background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
     }
 
+    .example-card:nth-child(4) .example-icon {
+      background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    }
+
+    .example-card:nth-child(5) .example-icon {
+      background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    }
+
     .example-content {
       padding: 25px;
     }
@@ -213,11 +221,11 @@
   <div class="container">
     <header>
       <h1>⚡ FastScrollView</h1>
-      <div class="subtitle">高性能虚拟滚动库 - 支持海量数据和动态高度</div>
+      <div class="subtitle">高性能虚拟滚动库 - 跳跃式按需渲染 | 支持海量数据和动态高度</div>
       <div class="features">
-        <div class="feature">✨ 虚拟滚动</div>
+        <div class="feature">⚡ 跳跃渲染</div>
         <div class="feature">📏 动态高度</div>
-        <div class="feature">🚀 超高性能</div>
+        <div class="feature">🚀 零跳动</div>
         <div class="feature">💪 10万+数据</div>
         <div class="feature">🎯 Vanilla JS</div>
       </div>
@@ -251,6 +259,36 @@
             <div class="stat">动态高度</div>
           </div>
           <a href="dynamic-height.html" class="view-button">查看示例 →</a>
+        </div>
+      </div>
+
+      <div class="example-card" onclick="location.href='test-optimized.html'">
+        <div class="example-icon">⚡</div>
+        <div class="example-content">
+          <div class="example-title">跳跃式渲染测试</div>
+          <div class="example-description">
+            测试按需渲染和跳跃跳转功能，展示从任意位置开始渲染的能力。
+          </div>
+          <div class="example-stats">
+            <div class="stat">10,000 条数据</div>
+            <div class="stat">跳跃渲染</div>
+          </div>
+          <a href="test-optimized.html" class="view-button">查看示例 →</a>
+        </div>
+      </div>
+
+      <div class="example-card" onclick="location.href='test-debug.html'">
+        <div class="example-icon">🔍</div>
+        <div class="example-content">
+          <div class="example-title">调试工具</div>
+          <div class="example-description">
+            提供详细的滚动日志和状态监控，用于调试和分析滚动行为。
+          </div>
+          <div class="example-stats">
+            <div class="stat">30 条数据</div>
+            <div class="stat">调试日志</div>
+          </div>
+          <a href="test-debug.html" class="view-button">查看示例 →</a>
         </div>
       </div>
 
@@ -289,9 +327,32 @@ function render(item, index, totalSize) {
 const fsv = new FastScrollView(
   '#container',  // 容器
   items,         // 数据
-  render         // 渲染函数
+  render,        // 渲染函数
+  {
+    estimatedItemHeight: 50  // 预估高度（可选）
+  }
 );
+
+<span class="highlight">// 4. 使用跳跃式渲染</span>
+fsv.scrollToItem(5000);  // 跳转到 #5000，只渲染附近元素
         </div>
+      </div>
+    </div>
+
+    <div class="info-section">
+      <div class="info-title">⚡ 跳跃式渲染</div>
+      <div class="info-content">
+        <p style="margin-bottom: 15px;">FastScrollView 采用创新的<strong>跳跃式按需渲染</strong>策略：</p>
+        <ul style="list-style: disc; margin-left: 25px; color: #666; line-height: 2;">
+          <li>✅ <strong>无需预先计算</strong> - 不遍历所有元素，从指定位置开始渲染</li>
+          <li>✅ <strong>双向扩展</strong> - 向上或向下滚动时自动追加新元素</li>
+          <li>✅ <strong>最小 DOM 节点</strong> - 只保留可见区域+缓冲区的元素</li>
+          <li>✅ <strong>智能占位符</strong> - 未渲染区域用占位符表示，保持正确的滚动条</li>
+          <li>✅ <strong>完全无跳动</strong> - 精心设计的渲染策略，滚动如丝般顺滑</li>
+        </ul>
+        <p style="margin-top: 15px; padding: 15px; background: #f0f7ff; border-radius: 8px; border-left: 4px solid #667eea;">
+          <strong>示例：</strong> 跳转到第 5000 项时，只渲染 #5000 附近 20-30 个元素，而不是全部 10000 个！
+        </p>
       </div>
     </div>
 
@@ -324,16 +385,20 @@ const fsv = new FastScrollView(
             <div class="api-desc">删除指定的数据项</div>
           </li>
           <li class="api-item">
+            <div class="api-name">scrollToItem(itemOrIndex)</div>
+            <div class="api-desc">跳转到指定的数据项（按需渲染，不全量加载）</div>
+          </li>
+          <li class="api-item">
             <div class="api-name">scrollToTop()</div>
-            <div class="api-desc">滚动到顶部</div>
+            <div class="api-desc">跳转到顶部（内部调用 scrollToItem(0)）</div>
           </li>
           <li class="api-item">
             <div class="api-name">scrollToBottom()</div>
-            <div class="api-desc">滚动到底部</div>
+            <div class="api-desc">跳转到底部（内部调用 scrollToItem(最后一项)）</div>
           </li>
           <li class="api-item">
-            <div class="api-name">scrollToItem(itemOrIndex)</div>
-            <div class="api-desc">滚动到指定的数据项</div>
+            <div class="api-name">refresh()</div>
+            <div class="api-desc">刷新显示并重新测量所有高度</div>
           </li>
         </ul>
       </div>
