@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>调试跳动问题</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: monospace;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+      color: #333;
+    }
+
+    .info {
+      background: white;
+      padding: 15px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .info-row {
+      display: grid;
+      grid-template-columns: 150px 1fr;
+      gap: 10px;
+      padding: 5px 0;
+      border-bottom: 1px solid #eee;
+    }
+
+    .info-row:last-child {
+      border-bottom: none;
+    }
+
+    .label {
+      font-weight: bold;
+      color: #666;
+    }
+
+    #scroll-container {
+      height: 400px;
+      border: 2px solid #333;
+      border-radius: 8px;
+      overflow: auto;
+      background: white;
+    }
+
+    .item {
+      padding: 20px;
+      border-bottom: 1px solid #ddd;
+      background: white;
+      transition: background 0.2s;
+    }
+
+    .item:hover {
+      background: #f0f0f0;
+    }
+
+    .item-index {
+      font-weight: bold;
+      font-size: 16px;
+      color: #007bff;
+      margin-bottom: 5px;
+    }
+
+    .item-content {
+      color: #666;
+      line-height: 1.6;
+    }
+
+    .item-height {
+      font-size: 12px;
+      color: #999;
+      margin-top: 5px;
+    }
+
+    /* 不同高度的item */
+    .height-small { min-height: 60px; background: #e3f2fd !important; }
+    .height-medium { min-height: 100px; background: #f3e5f5 !important; }
+    .height-large { min-height: 150px; background: #fff3e0 !important; }
+
+    .log {
+      background: #1e1e1e;
+      color: #00ff00;
+      padding: 15px;
+      border-radius: 8px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-size: 12px;
+      line-height: 1.4;
+      margin-top: 10px;
+    }
+
+    .log-item {
+      padding: 2px 0;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .log-error {
+      color: #ff5555;
+    }
+
+    .log-warning {
+      color: #ffff55;
+    }
+
+    .log-info {
+      color: #55ffff;
+    }
+
+    .buttons {
+      margin-bottom: 10px;
+      display: flex;
+      gap: 10px;
+    }
+
+    button {
+      padding: 10px 20px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 调试虚拟滚动跳动问题</h1>
+
+    <div class="buttons">
+      <button onclick="scrollToIndex(5)">滚动到 #5</button>
+      <button onclick="scrollToIndex(10)">滚动到 #10</button>
+      <button onclick="scrollToIndex(20)">滚动到 #20</button>
+      <button onclick="clearLog()">清除日志</button>
+    </div>
+
+    <div class="info">
+      <div class="info-row">
+        <span class="label">滚动位置:</span>
+        <span id="scroll-pos">0px</span>
+      </div>
+      <div class="info-row">
+        <span class="label">可见范围:</span>
+        <span id="visible-range">0 - 0</span>
+      </div>
+      <div class="info-row">
+        <span class="label">topSpacer:</span>
+        <span id="top-spacer">0px</span>
+      </div>
+      <div class="info-row">
+        <span class="label">bottomSpacer:</span>
+        <span id="bottom-spacer">0px</span>
+      </div>
+      <div class="info-row">
+        <span class="label">缓存大小:</span>
+        <span id="cache-size">0</span>
+      </div>
+    </div>
+
+    <div id="scroll-container"></div>
+
+    <div class="log" id="log"></div>
+  </div>
+
+  <script src="../dist/fast-scrollview.min.js"></script>
+  <script>
+    const logs = [];
+    
+    function addLog(message, type = 'info') {
+      const time = new Date().toLocaleTimeString();
+      const className = `log-${type}`;
+      logs.unshift(`<div class="log-item ${className}">[${time}] ${message}</div>`);
+      if (logs.length > 50) logs.pop();
+      
+      document.getElementById('log').innerHTML = logs.join('');
+    }
+
+    function clearLog() {
+      logs.length = 0;
+      document.getElementById('log').innerHTML = '';
+      addLog('日志已清除');
+    }
+
+    // 创建固定高度的测试数据
+    const items = [];
+    const heights = ['small', 'medium', 'large'];
+    
+    for (let i = 0; i < 30; i++) {
+      const heightType = heights[i % 3];
+      items.push({
+        id: i,
+        heightType: heightType,
+        content: `这是第 ${i} 条数据，高度类型：${heightType}`
+      });
+    }
+
+    addLog(`生成了 ${items.length} 条数据`);
+
+    // 渲染函数
+    function renderItem(item, index, totalSize) {
+      const div = document.createElement('div');
+      div.className = `item height-${item.heightType}`;
+      div.innerHTML = `
+        <div class="item-index">Item #${index}</div>
+        <div class="item-content">${item.content}</div>
+        <div class="item-height">高度类型: ${item.heightType}</div>
+      `;
+      return div;
+    }
+
+    // 创建 FastScrollView
+    addLog('初始化 FastScrollView...');
+    
+    const fsv = new FastScrollView(
+      '#scroll-container',
+      items,
+      renderItem,
+      {
+        estimatedItemHeight: 80,
+        bufferSize: 2,
+        onScroll: (info) => {
+          updateInfo();
+          addLog(`滚动事件: scrollTop=${Math.round(info.scrollTop)}, range=${info.visibleStart}-${info.visibleEnd}`);
+        }
+      }
+    );
+
+    addLog('✅ FastScrollView 初始化完成', 'info');
+
+    // 更新信息
+    function updateInfo() {
+      const range = fsv.getVisibleRange();
+      const scrollTop = fsv.getScrollTop();
+      const topSpacerHeight = fsv.topSpacer.style.height;
+      const bottomSpacerHeight = fsv.bottomSpacer.style.height;
+      const cacheSize = fsv.renderedCache.size;
+
+      document.getElementById('scroll-pos').textContent = Math.round(scrollTop) + 'px';
+      document.getElementById('visible-range').textContent = `${range.start} - ${range.end}`;
+      document.getElementById('top-spacer').textContent = topSpacerHeight;
+      document.getElementById('bottom-spacer').textContent = bottomSpacerHeight;
+      document.getElementById('cache-size').textContent = cacheSize;
+    }
+
+    function scrollToIndex(index) {
+      addLog(`手动滚动到索引 ${index}`, 'warning');
+      fsv.scrollToItem(index);
+      updateInfo();
+    }
+
+    // 初始更新
+    updateInfo();
+
+    // 监听实际的滚动事件，记录详细信息
+    let lastScrollTop = 0;
+    fsv.container.addEventListener('scroll', () => {
+      const currentScrollTop = fsv.container.scrollTop;
+      const delta = currentScrollTop - lastScrollTop;
+      
+      if (Math.abs(delta) > 50) {
+        addLog(`⚠️ 大幅跳动检测! delta=${delta.toFixed(1)}px`, 'error');
+      }
+      
+      lastScrollTop = currentScrollTop;
+    });
+
+    addLog('📊 开始监控滚动行为...');
+  </script>
+</body>
+</html>
+

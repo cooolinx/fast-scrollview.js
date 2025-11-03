@@ -130,10 +130,10 @@
 
     <div class="controls">
       <div class="button-group">
-        <button onclick="scrollToTop()">滚动到顶部</button>
-        <button onclick="scrollToBottom()">滚动到底部</button>
-        <button onclick="scrollToMiddle()">滚动到中间</button>
-        <button onclick="scrollToRandom()">滚动到随机位置</button>
+        <button onclick="scrollToItem(0)">跳转到 #0 (顶部)</button>
+        <button onclick="scrollToItem(items.length - 1)">跳转到最后一项 (底部)</button>
+        <button onclick="scrollToItem(Math.floor(items.length / 2))">跳转到 #50000 (中间)</button>
+        <button onclick="scrollToRandom()">跳转到随机位置</button>
         <button onclick="addItem()">添加一条数据</button>
         <button onclick="prependItem()">在开头插入</button>
         <button onclick="removeItem()">删除一条数据</button>
@@ -222,23 +222,16 @@
     }
 
     // 控制函数
-    function scrollToTop() {
-      fsv.scrollToTop();
-    }
-
-    function scrollToBottom() {
-      fsv.scrollToBottom();
-    }
-
-    function scrollToMiddle() {
-      const middleIndex = Math.floor(items.length / 2);
-      fsv.scrollToItem(middleIndex);
+    function scrollToItem(index) {
+      fsv.scrollToItem(index);
+      updateInfo();
     }
 
     function scrollToRandom() {
       const randomIndex = Math.floor(Math.random() * items.length);
       fsv.scrollToItem(randomIndex);
-      alert(`已滚动到索引: ${randomIndex}`);
+      alert(`已跳转到索引: ${randomIndex}`);
+      updateInfo();
     }
 
     function addItem() {

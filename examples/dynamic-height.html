@@ -137,10 +137,10 @@
 
     <div class="controls">
       <div class="button-group">
-        <button onclick="scrollToTop()">滚动到顶部</button>
-        <button onclick="scrollToBottom()">滚动到底部</button>
-        <button onclick="scrollToItem(5000)">滚动到 #5000</button>
-        <button onclick="scrollToItem(10000)">滚动到 #10000</button>
+        <button onclick="scrollToItem(0)">跳转到 #0 (顶部)</button>
+        <button onclick="scrollToItem(5000)">跳转到 #5000</button>
+        <button onclick="scrollToItem(10000)">跳转到 #10000</button>
+        <button onclick="scrollToItem(items.length - 1)">跳转到最后 (底部)</button>
         <button onclick="addRandomCard()">添加随机卡片</button>
         <button onclick="fsv.refresh()">刷新高度</button>
       </div>
@@ -207,19 +207,11 @@
     console.timeEnd('初始化虚拟滚动');
 
     // 控制函数
-    function scrollToTop() {
-      fsv.scrollToTop();
-    }
-
-    function scrollToBottom() {
-      fsv.scrollToBottom();
-    }
-
     function scrollToItem(index) {
       if (index >= 0 && index < items.length) {
         fsv.scrollToItem(index);
         setTimeout(() => {
-          alert(`已滚动到 #${index}`);
+          alert(`已跳转到 #${index}`);
         }, 100);
       }
     }

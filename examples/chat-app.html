@@ -295,7 +295,7 @@
       if (!message.user.isSelf) {
         html += `<div class="message-sender">${message.user.name}</div>`;
       }
-      html += `<div class="message-text">${message.text}</div>`;
+      html += `<div class="message-text">#${index} ${message.text}</div>`;
       html += `<div class="message-time">${message.time}</div>`;
       
       bubble.innerHTML = html;
