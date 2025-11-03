@@ -311,8 +311,7 @@
       messages,
       renderMessage,
       {
-        estimatedItemHeight: 60,
-        bufferSize: 5,
+        initialPosition: 'bottom',
         onScroll: (info) => {
           // 可以在这里添加滚动事件处理
         }
@@ -321,9 +320,9 @@
     console.timeEnd('初始化聊天滚动');
 
     // 自动滚动到底部（最新消息）
-    setTimeout(() => {
-      fsv.scrollToBottom();
-    }, 100);
+    // setTimeout(() => {
+    //   fsv.scrollToBottom();
+    // }, 100);
 
     // 控制函数
     function scrollToTop() {

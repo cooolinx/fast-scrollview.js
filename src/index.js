@@ -18,6 +18,7 @@ class FastScrollView {
    * @param {Object} options - 可选配置
    * @param {number} options.bufferThreshold - 缓冲阈值（默认2，表示提前2个屏幕高度触发渲染）
    * @param {Function} options.onScroll - 滚动回调
+   * @param {string} options.initialPosition - 初始定位 'top'(默认) 或 'bottom'
    */
   constructor(container, items = [], render = null, options = {}) {
     // 获取容器元素
@@ -38,6 +39,7 @@ class FastScrollView {
       // bufferThreshold 和 bufferSize 都支持（向后兼容）
       bufferThreshold: options.bufferThreshold || options.bufferSize || 2,
       onScroll: options.onScroll || null,
+      initialPosition: options.initialPosition || 'top', // 'top' 或 'bottom'
     };
 
     // 数据
@@ -156,7 +158,12 @@ class FastScrollView {
 
     // 如果还没有渲染任何内容，从当前滚动位置开始渲染
     if (this.renderedStartIndex === -1) {
-      this.renderFromPosition(scrollTop);
+      // 如果设置为底部定位，从底部开始渲染
+      if (this.options.initialPosition === 'bottom') {
+        this.renderFromBottom();
+      } else {
+        this.renderFromPosition(scrollTop);
+      }
       this.isUpdating = false;
       return;
     }
@@ -264,6 +271,65 @@ class FastScrollView {
     }
     
     this.updateSpacers();
+  }
+
+  /**
+   * 从底部开始渲染（用于 initialPosition: 'bottom'）
+   * 策略：从最后一项开始向前渲染，填满屏幕，然后滚动到底部
+   */
+  renderFromBottom() {
+    if (this.items.length === 0) {
+      return;
+    }
+
+    const containerHeight = this.container.clientHeight;
+    const expandThreshold = containerHeight * this.options.bufferThreshold;
+    const targetHeight = containerHeight + expandThreshold;
+    
+    // 清空内容
+    this.contentContainer.innerHTML = '';
+    
+    // 从最后一项开始，向前渲染直到填满屏幕
+    const batchSize = 20;
+    let accumulatedHeight = 0;
+    let endIndex = this.items.length;
+    let startIndex = this.items.length;
+    
+    while (startIndex > 0 && accumulatedHeight < targetHeight) {
+      const batchStart = Math.max(0, startIndex - batchSize);
+      
+      // 渲染这一批（倒序插入到前面）
+      for (let i = startIndex - 1; i >= batchStart; i--) {
+        const item = this.items[i];
+        if (item !== undefined) {
+          const element = this.createItemElement(item, i);
+          this.contentContainer.insertBefore(element, this.contentContainer.firstChild);
+        }
+      }
+      
+      // 测量这一批的实际高度
+      for (let i = batchStart; i < startIndex; i++) {
+        const element = this.contentContainer.querySelector(`[data-index="${i}"]`);
+        if (element) {
+          accumulatedHeight += element.offsetHeight;
+        }
+      }
+      
+      startIndex = batchStart;
+    }
+    
+    // 更新渲染范围
+    this.renderedStartIndex = startIndex;
+    this.renderedEndIndex = endIndex;
+    this.updateSpacers();
+    
+    // 立即滚动到底部（在 DOM 更新的同一帧）
+    this.container.scrollTop = this.container.scrollHeight;
+    
+    // 确保滚动位置正确
+    requestAnimationFrame(() => {
+      this.container.scrollTop = this.container.scrollHeight;
+    });
   }
 
   /**
@@ -398,7 +464,6 @@ class FastScrollView {
     this.renderedStartIndex = -1;
     this.renderedEndIndex = -1;
     this.contentContainer.innerHTML = '';
-    this.container.scrollTop = 0;
     this.endUpdate();
   }
 
@@ -558,7 +623,7 @@ class FastScrollView {
    * 从最后一项开始向前渲染，填满屏幕后滚动到真正的底部
    */
   scrollToBottom() {
-    this.scrollToItem(this.items.length - 1, isBottom);
+    this.scrollToItem(this.items.length - 1, true);
   }
 
   /**
