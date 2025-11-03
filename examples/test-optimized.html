@@ -186,13 +186,14 @@
     <h1>⚡ 优化后的按需渲染测试</h1>
 
     <div class="description">
-      <h2>✨ 新的优化策略</h2>
+      <h2>✨ 跳跃式渲染策略</h2>
       <ul>
         <li><strong>不预先计算：</strong>不需要提前遍历所有元素计算高度和位置</li>
-        <li><strong>按需渲染：</strong>从当前滚动位置开始，逐个渲染元素直到填满屏幕</li>
-        <li><strong>智能缓存：</strong>已渲染的元素自动缓存，避免重复渲染</li>
-        <li><strong>简化跳转：</strong>跳转到某个item时，直接从该item开始渲染，不需要计算scroll值</li>
-        <li><strong>性能提升：</strong>初始化速度更快，滚动更流畅</li>
+        <li><strong>跳跃式渲染：</strong>可以从任意位置（如 #5000）开始渲染，只渲染附近元素</li>
+        <li><strong>实时测量：</strong>直接从 DOM 读取元素实时高度，支持动态变化</li>
+        <li><strong>分批加载：</strong>渲染一批、测量一批，精确控制渲染范围</li>
+        <li><strong>双向扩展：</strong>向上或向下滚动时自动追加新元素</li>
+        <li><strong>零跳动：</strong>精心设计的占位符管理，滚动完全流畅</li>
       </ul>
     </div>
 
@@ -220,10 +221,6 @@
         <div class="stat-item">
           <span class="stat-label">DOM渲染数:</span>
           <span id="rendered-count">0</span>
-        </div>
-        <div class="stat-item">
-          <span class="stat-label">缓存元素数:</span>
-          <span id="cache-count">0</span>
         </div>
         <div class="stat-item">
           <span class="stat-label">滚动位置:</span>
@@ -313,7 +310,6 @@
       document.getElementById('total-count').textContent = fsv.getItemCount().toLocaleString();
       document.getElementById('visible-range').textContent = `${range.start} - ${range.end}`;
       document.getElementById('rendered-count').textContent = range.count;
-      document.getElementById('cache-count').textContent = fsv.renderedCache.size;
       document.getElementById('scroll-position').textContent = Math.round(fsv.getScrollTop()) + 'px';
     }
 
@@ -348,9 +344,8 @@
     }
 
     function clearCache() {
-      const oldSize = fsv.renderedCache.size;
       fsv.refresh();
-      addLog(`清除了 ${oldSize} 个缓存元素`);
+      addLog(`已刷新显示，从当前位置重新渲染`);
       updateStats();
     }
 
