@@ -17,6 +17,23 @@
       padding: 20px;
     }
 
+    .header {
+      max-width: 1400px;
+      margin: 0 auto 20px;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 32px;
+      color: #333;
+      margin-bottom: 10px;
+    }
+
+    .header p {
+      color: #666;
+      font-size: 16px;
+    }
+
     .container-wrapper {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
@@ -168,9 +185,36 @@
       border-radius: 3px;
       font-weight: 600;
     }
+
+    .back-button {
+      display: inline-block;
+      margin-bottom: 20px;
+      padding: 10px 20px;
+      background: white;
+      color: #667eea;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      transition: all 0.2s;
+    }
+
+    .back-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
   </style>
 </head>
 <body>
+  <div style="max-width: 1400px; margin: 0 auto;">
+    <a href="index.html" class="back-button">← 返回示例列表</a>
+  </div>
+
+  <div class="header">
+    <h1>📍 底部对齐测试</h1>
+    <p>测试 initialPosition: "bottom" 参数，展示内容贴底显示效果</p>
+  </div>
+
   <div class="container-wrapper">
     <!-- 测试 1: 1条消息 -->
     <div class="demo-panel">
@@ -309,7 +353,7 @@
 
     // 加载消息
     function loadMessages(panelId, count) {
-      const messages = generateMessages(count);
+      const messages = generateMessages(count, '新-');
       scrollViews[panelId].setItems(messages);
     }
 
@@ -336,4 +380,3 @@
   </script>
 </body>
 </html>
-

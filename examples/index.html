@@ -103,6 +103,10 @@
       background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
     }
 
+    .example-card:nth-child(6) .example-icon {
+      background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
+    }
+
     .example-content {
       padding: 25px;
     }
@@ -306,6 +310,21 @@
           <a href="chat-app.html" class="view-button">查看示例 →</a>
         </div>
       </div>
+
+      <div class="example-card" onclick="location.href='bottom-align-test.html'">
+        <div class="example-icon">📍</div>
+        <div class="example-content">
+          <div class="example-title">底部对齐测试</div>
+          <div class="example-description">
+            测试 initialPosition: "bottom" 参数，展示内容贴底显示效果，适合聊天应用场景。
+          </div>
+          <div class="example-stats">
+            <div class="stat">底部对齐</div>
+            <div class="stat">自动贴底</div>
+          </div>
+          <a href="bottom-align-test.html" class="view-button">查看示例 →</a>
+        </div>
+      </div>
     </div>
 
     <div class="info-section">
@@ -329,7 +348,8 @@ const fsv = new FastScrollView(
   items,         // 数据
   render,        // 渲染函数
   {
-    estimatedItemHeight: 50  // 预估高度（可选）
+    bufferThreshold: 2,      // 缓冲阈值（可选）
+    initialPosition: 'top'   // 初始位置: 'top' 或 'bottom'（可选）
   }
 );
 
@@ -357,12 +377,32 @@ fsv.scrollToItem(5000);  // 跳转到 #5000，只渲染附近元素
     </div>
 
     <div class="info-section">
+      <div class="info-title">⚙️ 配置选项</div>
+      <div class="info-content">
+        <ul class="api-list">
+          <li class="api-item">
+            <div class="api-name">bufferThreshold</div>
+            <div class="api-desc">缓冲阈值，默认为 2（提前 2 个屏幕高度触发渲染）</div>
+          </li>
+          <li class="api-item">
+            <div class="api-name">initialPosition: 'top' | 'bottom'</div>
+            <div class="api-desc">初始定位方式。'top' 从顶部开始（默认），'bottom' 从底部开始并自动贴底显示，适合聊天应用</div>
+          </li>
+          <li class="api-item">
+            <div class="api-name">onScroll(event)</div>
+            <div class="api-desc">滚动回调函数，接收包含 scrollTop、visibleStart、visibleEnd 的事件对象</div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="info-section">
       <div class="info-title">📚 核心 API</div>
       <div class="info-content">
         <ul class="api-list">
           <li class="api-item">
             <div class="api-name">setItems(items)</div>
-            <div class="api-desc">设置新的数据数组</div>
+            <div class="api-desc">设置新的数据数组，会根据 initialPosition 自动定位到顶部或底部</div>
           </li>
           <li class="api-item">
             <div class="api-name">setItem(index, item)</div>

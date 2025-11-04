@@ -134,8 +134,8 @@ const fsv = new FastScrollView(
   items,                // 数据数组
   renderItem,           // 渲染函数
   {
-    estimatedItemHeight: 50,   // 预估行高（可选，默认 50）
     bufferThreshold: 2,        // 缓冲阈值（可选，默认 2）
+    initialPosition: 'top',    // 初始位置（可选，'top' 或 'bottom'，默认 'top'）
     onScroll: (info) => {      // 滚动回调（可选）
       console.log('滚动中...', info);
     }
@@ -160,8 +160,8 @@ new FastScrollView(container, items, render, options)
 - **items** (Array) - 要渲染的数据数组
 - **render** (Function) - 渲染函数，签名：`(item, index, totalSize) => HTMLElement | string`
 - **options** (Object, 可选) - 配置选项
-  - `estimatedItemHeight` (number) - 预估行高，默认 50（仅用于估算未渲染元素）
   - `bufferThreshold` (number) - 缓冲阈值，默认 2（表示提前2个屏幕高度触发渲染）
+  - `initialPosition` (string) - 初始定位方式，`'top'`（默认）或 `'bottom'`（底部对齐）
   - `onScroll` (Function) - 滚动时的回调函数
 
 ### 数据操作方法
@@ -310,6 +310,61 @@ fsv.refresh();
 fsv.destroy();
 ```
 
+## 🎯 底部对齐模式（聊天应用专用）
+
+FastScrollView 支持 `initialPosition: 'bottom'` 参数，特别适合聊天应用等需要从底部显示内容的场景。
+
+### 使用方法
+
+```javascript
+const chatView = new FastScrollView(
+  '#chat-container',
+  messages,
+  renderMessage,
+  {
+    initialPosition: 'bottom',  // 👈 启用底部对齐
+    bufferThreshold: 2
+  }
+);
+```
+
+### 特性
+
+- ✅ **自动贴底** - 当消息数量少时，自动贴在底部显示（像真实的聊天应用）
+- ✅ **智能定位** - `setItems()` 后自动滚动到最底部
+- ✅ **完美体验** - 无论内容多少，始终从底部开始显示
+
+### 效果对比
+
+```javascript
+// 默认模式 (initialPosition: 'top')
+// 1-2 条消息时，从顶部开始显示
+┌─────────────────┐
+│ 消息1           │
+│ 消息2           │
+│                 │
+│     (空白)      │
+│                 │
+└─────────────────┘
+
+// 底部对齐模式 (initialPosition: 'bottom')
+// 1-2 条消息时，贴在底部显示
+┌─────────────────┐
+│                 │
+│     (空白)      │
+│                 │
+│ 消息1           │
+│ 消息2           │
+└─────────────────┘
+```
+
+### 适用场景
+
+- 💬 聊天应用
+- 📱 消息列表
+- 💭 评论区
+- 📝 日志查看器
+
 ## 🎨 示例
 
 项目包含多个完整的示例，演示不同的使用场景：
@@ -337,6 +392,14 @@ fsv.destroy();
 - ✅ 5万条聊天消息
 - ✅ 实时发送消息
 - ✅ 完整的用户交互
+
+### 4. 底部对齐测试 (examples/bottom-align-test.html)
+
+测试 `initialPosition: 'bottom'` 参数的各种场景。
+
+- ✅ 测试 1-2 条消息贴底显示
+- ✅ 测试多条消息滚动到底部
+- ✅ 与默认 top 对齐模式对比
 
 ### 查看示例
 
