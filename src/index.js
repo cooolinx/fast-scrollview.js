@@ -321,6 +321,8 @@ class FastScrollView {
     // 更新渲染范围
     this.renderedStartIndex = startIndex;
     this.renderedEndIndex = endIndex;
+    
+    // 更新占位符（会自动处理底部对齐）
     this.updateSpacers();
     
     // 立即滚动到底部（在 DOM 更新的同一帧）
@@ -383,14 +385,37 @@ class FastScrollView {
   /**
    * 更新占位符高度
    * 使用固定大小的 spacer，足够触发滚动事件即可
+   * 当 initialPosition 为 'bottom' 且内容高度不足时，使用 topSpacer 将内容推到底部
    */
   updateSpacers() {
-    // 固定高度，约 2 倍屏幕高度，足够触发滚动和扩展渲染
-    const fixedSpacerHeight = (this.container.clientHeight || 800) * 2;
+    const containerHeight = this.container.clientHeight || 800;
+    const fixedSpacerHeight = containerHeight * 2;
     
-    // 只要还有未渲染内容，就显示固定高度的 spacer
-    this.topSpacer.style.height = this.renderedStartIndex > 0 ? `${fixedSpacerHeight}px` : '0px';
-    this.bottomSpacer.style.height = this.renderedEndIndex < this.items.length ? `${fixedSpacerHeight}px` : '0px';
+    // 检查是否启用底部对齐模式
+    const isBottomAlign = this.options.initialPosition === 'bottom';
+    
+    // 检查是否所有内容都已渲染
+    const allRendered = this.renderedStartIndex === 0 && this.renderedEndIndex === this.items.length;
+    
+    if (isBottomAlign && allRendered && this.items.length > 0) {
+      // 底部对齐模式：如果内容高度不足，用 topSpacer 推到底部
+      const contentHeight = this.contentContainer.offsetHeight;
+      
+      if (contentHeight < containerHeight) {
+        // 内容不足一屏，使用 topSpacer 推到底部
+        const paddingHeight = containerHeight - contentHeight;
+        this.topSpacer.style.height = `${paddingHeight}px`;
+        this.bottomSpacer.style.height = '0px';
+      } else {
+        // 内容足够，正常显示
+        this.topSpacer.style.height = '0px';
+        this.bottomSpacer.style.height = '0px';
+      }
+    } else {
+      // 默认模式或有未渲染内容：使用固定 spacer
+      this.topSpacer.style.height = this.renderedStartIndex > 0 ? `${fixedSpacerHeight}px` : '0px';
+      this.bottomSpacer.style.height = this.renderedEndIndex < this.items.length ? `${fixedSpacerHeight}px` : '0px';
+    }
   }
 
   /**

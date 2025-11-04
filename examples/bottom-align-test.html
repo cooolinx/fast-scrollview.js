@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FastScrollView - 底部对齐测试</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f2f5;
+      padding: 20px;
+    }
+
+    .container-wrapper {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 20px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .demo-panel {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: 600px;
+    }
+
+    .panel-header {
+      padding: 16px 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .panel-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .panel-subtitle {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+
+    .controls {
+      padding: 12px 20px;
+      background: #f8f9fa;
+      border-bottom: 1px solid #e0e0e0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .btn {
+      padding: 6px 12px;
+      border: none;
+      border-radius: 6px;
+      background: #667eea;
+      color: white;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+
+    .btn:hover {
+      background: #5568d3;
+      transform: translateY(-1px);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn-secondary {
+      background: #48bb78;
+    }
+
+    .btn-secondary:hover {
+      background: #38a169;
+    }
+
+    .scroll-container {
+      flex: 1;
+      overflow: auto;
+      background: white;
+    }
+
+    /* 聊天消息样式 */
+    .message {
+      padding: 12px 20px;
+      border-bottom: 1px solid #f0f0f0;
+      animation: fadeIn 0.3s ease-in;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .message-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+
+    .message-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .message-author {
+      font-weight: 600;
+      color: #2d3748;
+      font-size: 14px;
+    }
+
+    .message-time {
+      font-size: 11px;
+      color: #a0aec0;
+      margin-left: auto;
+    }
+
+    .message-content {
+      padding-left: 40px;
+      color: #4a5568;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .status-bar {
+      padding: 8px 20px;
+      background: #f8f9fa;
+      border-top: 1px solid #e0e0e0;
+      font-size: 12px;
+      color: #718096;
+      text-align: center;
+    }
+
+    .highlight {
+      background: #fef3c7;
+      padding: 2px 4px;
+      border-radius: 3px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="container-wrapper">
+    <!-- 测试 1: 1条消息 -->
+    <div class="demo-panel">
+      <div class="panel-header">
+        <div class="panel-title">测试 1: 只有 1 条消息</div>
+        <div class="panel-subtitle">应该贴在底部显示</div>
+      </div>
+      <div class="controls">
+        <button class="btn" onclick="loadMessages(1, 1)">加载 1 条</button>
+        <button class="btn btn-secondary" onclick="addMessage(1)">添加消息</button>
+      </div>
+      <div id="container-1" class="scroll-container"></div>
+      <div class="status-bar">initialPosition: <span class="highlight">bottom</span></div>
+    </div>
+
+    <!-- 测试 2: 2条消息 -->
+    <div class="demo-panel">
+      <div class="panel-header">
+        <div class="panel-title">测试 2: 只有 2 条消息</div>
+        <div class="panel-subtitle">应该贴在底部显示</div>
+      </div>
+      <div class="controls">
+        <button class="btn" onclick="loadMessages(2, 2)">加载 2 条</button>
+        <button class="btn btn-secondary" onclick="addMessage(2)">添加消息</button>
+      </div>
+      <div id="container-2" class="scroll-container"></div>
+      <div class="status-bar">initialPosition: <span class="highlight">bottom</span></div>
+    </div>
+
+    <!-- 测试 3: 多条消息 -->
+    <div class="demo-panel">
+      <div class="panel-header">
+        <div class="panel-title">测试 3: 多条消息</div>
+        <div class="panel-subtitle">超过一屏，正常滚动到底部</div>
+      </div>
+      <div class="controls">
+        <button class="btn" onclick="loadMessages(3, 20)">加载 20 条</button>
+        <button class="btn" onclick="loadMessages(3, 100)">加载 100 条</button>
+        <button class="btn btn-secondary" onclick="addMessage(3)">添加消息</button>
+      </div>
+      <div id="container-3" class="scroll-container"></div>
+      <div class="status-bar">initialPosition: <span class="highlight">bottom</span></div>
+    </div>
+
+    <!-- 对比测试: top 对齐 -->
+    <div class="demo-panel">
+      <div class="panel-header">
+        <div class="panel-title">对比: top 对齐（默认）</div>
+        <div class="panel-subtitle">从顶部开始显示</div>
+      </div>
+      <div class="controls">
+        <button class="btn" onclick="loadMessages(4, 2)">加载 2 条</button>
+        <button class="btn" onclick="loadMessages(4, 20)">加载 20 条</button>
+      </div>
+      <div id="container-4" class="scroll-container"></div>
+      <div class="status-bar">initialPosition: <span class="highlight">top</span></div>
+    </div>
+  </div>
+
+  <script src="../dist/fast-scrollview.min.js"></script>
+  <script>
+    // 生成消息数据
+    function generateMessages(count, prefix = '') {
+      const messages = [];
+      const names = ['Alice', 'Bob', 'Charlie', 'David', 'Emma', 'Frank', 'Grace', 'Henry'];
+      const contents = [
+        '你好！这是一条测试消息。',
+        '今天天气不错，适合出去走走。',
+        '我刚看到一个很有趣的功能！',
+        '虚拟滚动真的很强大啊。',
+        '这个组件的性能表现很好。',
+        '底部对齐功能非常实用。',
+        '特别是聊天应用场景。',
+        '我觉得这个设计很合理。'
+      ];
+
+      for (let i = 1; i <= count; i++) {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - (count - i));
+        
+        messages.push({
+          id: `${prefix}${i}`,
+          author: names[i % names.length],
+          content: contents[i % contents.length],
+          time: now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+        });
+      }
+      return messages;
+    }
+
+    // 渲染消息
+    function renderMessage(message) {
+      const initial = message.author.charAt(0).toUpperCase();
+      return `
+        <div class="message-header">
+          <div class="message-avatar">${initial}</div>
+          <div class="message-author">${message.author}</div>
+          <div class="message-time">${message.time}</div>
+        </div>
+        <div class="message-content">${message.content}</div>
+      `;
+    }
+
+    // 创建 ScrollView 实例
+    const scrollViews = {};
+
+    // 底部对齐的实例
+    scrollViews[1] = new FastScrollView(
+      '#container-1',
+      generateMessages(1),
+      renderMessage,
+      { initialPosition: 'bottom', bufferThreshold: 2 }
+    );
+
+    scrollViews[2] = new FastScrollView(
+      '#container-2',
+      generateMessages(2),
+      renderMessage,
+      { initialPosition: 'bottom', bufferThreshold: 2 }
+    );
+
+    scrollViews[3] = new FastScrollView(
+      '#container-3',
+      generateMessages(20),
+      renderMessage,
+      { initialPosition: 'bottom', bufferThreshold: 2 }
+    );
+
+    // 顶部对齐的实例（对比）
+    scrollViews[4] = new FastScrollView(
+      '#container-4',
+      generateMessages(2),
+      renderMessage,
+      { initialPosition: 'top', bufferThreshold: 2 }
+    );
+
+    // 加载消息
+    function loadMessages(panelId, count) {
+      const messages = generateMessages(count);
+      scrollViews[panelId].setItems(messages);
+    }
+
+    // 添加新消息
+    let messageCounter = 1000;
+    function addMessage(panelId) {
+      const now = new Date();
+      const newMessage = {
+        id: `new-${messageCounter++}`,
+        author: 'You',
+        content: `这是新添加的消息 #${messageCounter}`,
+        time: now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+      };
+      
+      scrollViews[panelId].append(newMessage);
+      
+      // 如果是底部对齐，滚动到底部
+      if (panelId !== 4) {
+        setTimeout(() => {
+          scrollViews[panelId].scrollToBottom();
+        }, 50);
+      }
+    }
+  </script>
+</body>
+</html>
+
