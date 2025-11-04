@@ -6,11 +6,9 @@
 
 - ⚡ **跳跃式渲染** - 可以从任意位置开始渲染，无需预先计算
 - 🚀 **零跳动** - 精心设计的占位符管理，滚动如丝般顺滑
-- 📏 **动态高度支持** - 自动测量和缓存每个元素的实际高度
-- 💾 **智能缓存** - 已测量的高度自动缓存，越用越快
 - 🔄 **双向扩展** - 向上或向下滚动时自动追加新元素
-- 🎯 **原生 JavaScript** - 零依赖，仅 8.5 KB（gzip 后更小）
-- 💪 **海量数据** - 轻松处理 10万+ 条数据
+- 🎯 **原生 JavaScript** - 零依赖，仅 10 KB（gzip 后更小）
+- 💪 **海量数据** - 轻松处理 100万+ 条数据
 - 🔧 **丰富的 API** - 完整的数据操作和滚动控制方法
 - 📱 **移动端友好** - 完美支持触摸滚动
 
@@ -28,7 +26,6 @@ FastScrollView 采用创新的**跳跃式按需渲染**策略，与传统虚拟�
 ### FastScrollView 的优势
 - ✅ **无需预先计算** - 不遍历所有元素，直接从目标位置开始
 - ✅ **跳跃式跳转** - 跳转到 #5000 时，只渲染 #5000 附近 20-30 个元素
-- ✅ **智能缓存** - 已测量的高度自动缓存，下次使用更准确
 - ✅ **双向扩展** - 向上/向下滚动时自动追加，不删除已有元素
 - ✅ **零跳动** - 不调整 scrollTop，完全依赖占位符
 - ✅ **更快初始化** - 只渲染首屏，启动几乎瞬间完成
@@ -85,7 +82,7 @@ npm install fast-scrollview
 
 ```bash
 # 克隆仓库
-git clone <repository-url>
+git clone git@github.com:cooolinx/fast-scrollview.js.git
 cd fast-scrollview
 
 # 安装依赖
@@ -240,7 +237,7 @@ fsv.scrollToItem(item);
 
 #### scrollToTop()
 
-跳转到顶部（内部调用 `scrollToItem(0)`）。
+跳转到顶部。
 
 ```javascript
 fsv.scrollToTop();  // 等同于 fsv.scrollToItem(0)
@@ -248,7 +245,7 @@ fsv.scrollToTop();  // 等同于 fsv.scrollToItem(0)
 
 #### scrollToBottom()
 
-跳转到底部（内部调用 `scrollToItem(最后一项)`）。
+跳转到底部。
 
 ```javascript
 fsv.scrollToBottom();  // 等同于 fsv.scrollToItem(items.length - 1)
@@ -257,14 +254,6 @@ fsv.scrollToBottom();  // 等同于 fsv.scrollToItem(items.length - 1)
 **注意：** `scrollToTop()` 和 `scrollToBottom()` 也是按需渲染，不会加载整个列表。
 
 ### 获取信息方法
-
-#### getScrollTop()
-
-获取当前滚动位置。
-
-```javascript
-const scrollTop = fsv.getScrollTop();
-```
 
 #### getVisibleRange()
 

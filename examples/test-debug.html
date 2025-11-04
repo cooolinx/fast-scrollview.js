@@ -252,12 +252,10 @@
     // 更新信息
     function updateInfo() {
       const range = fsv.getVisibleRange();
-      const scrollTop = fsv.getScrollTop();
       const topSpacerHeight = fsv.topSpacer.style.height;
       const bottomSpacerHeight = fsv.bottomSpacer.style.height;
       const cacheSize = fsv.renderedCache.size;
 
-      document.getElementById('scroll-pos').textContent = Math.round(scrollTop) + 'px';
       document.getElementById('visible-range').textContent = `${range.start} - ${range.end}`;
       document.getElementById('top-spacer').textContent = topSpacerHeight;
       document.getElementById('bottom-spacer').textContent = bottomSpacerHeight;
