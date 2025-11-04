@@ -212,7 +212,7 @@
 
   <div class="header">
     <h1>📍 底部对齐测试</h1>
-    <p>测试 initialPosition: "bottom" 参数，展示内容贴底显示效果</p>
+    <p>测试 align: "bottom" 参数，展示内容贴底显示效果</p>
   </div>
 
   <div class="container-wrapper">
@@ -227,7 +227,7 @@
         <button class="btn btn-secondary" onclick="addMessage(1)">添加消息</button>
       </div>
       <div id="container-1" class="scroll-container"></div>
-      <div class="status-bar">initialPosition: <span class="highlight">bottom</span></div>
+      <div class="status-bar">align: <span class="highlight">bottom</span></div>
     </div>
 
     <!-- 测试 2: 2条消息 -->
@@ -241,7 +241,7 @@
         <button class="btn btn-secondary" onclick="addMessage(2)">添加消息</button>
       </div>
       <div id="container-2" class="scroll-container"></div>
-      <div class="status-bar">initialPosition: <span class="highlight">bottom</span></div>
+      <div class="status-bar">align: <span class="highlight">bottom</span></div>
     </div>
 
     <!-- 测试 3: 多条消息 -->
@@ -256,7 +256,7 @@
         <button class="btn btn-secondary" onclick="addMessage(3)">添加消息</button>
       </div>
       <div id="container-3" class="scroll-container"></div>
-      <div class="status-bar">initialPosition: <span class="highlight">bottom</span></div>
+      <div class="status-bar">align: <span class="highlight">bottom</span></div>
     </div>
 
     <!-- 对比测试: top 对齐 -->
@@ -270,7 +270,7 @@
         <button class="btn" onclick="loadMessages(4, 20)">加载 20 条</button>
       </div>
       <div id="container-4" class="scroll-container"></div>
-      <div class="status-bar">initialPosition: <span class="highlight">top</span></div>
+      <div class="status-bar">align: <span class="highlight">top</span></div>
     </div>
   </div>
 
@@ -326,21 +326,21 @@
       '#container-1',
       generateMessages(1),
       renderMessage,
-      { initialPosition: 'bottom', bufferThreshold: 2 }
+      { align: 'bottom', bufferThreshold: 2 }
     );
 
     scrollViews[2] = new FastScrollView(
       '#container-2',
       generateMessages(2),
       renderMessage,
-      { initialPosition: 'bottom', bufferThreshold: 2 }
+      { align: 'bottom', bufferThreshold: 2 }
     );
 
     scrollViews[3] = new FastScrollView(
       '#container-3',
       generateMessages(20),
       renderMessage,
-      { initialPosition: 'bottom', bufferThreshold: 2 }
+      { align: 'bottom', bufferThreshold: 2 }
     );
 
     // 顶部对齐的实例（对比）
@@ -348,7 +348,7 @@
       '#container-4',
       generateMessages(2),
       renderMessage,
-      { initialPosition: 'top', bufferThreshold: 2 }
+      { align: 'top', bufferThreshold: 2 }
     );
 
     // 加载消息

@@ -18,7 +18,7 @@ class FastScrollView {
    * @param {Object} options - 可选配置
    * @param {number} options.bufferThreshold - 缓冲阈值（默认2，表示提前2个屏幕高度触发渲染）
    * @param {Function} options.onScroll - 滚动回调
-   * @param {string} options.initialPosition - 初始定位 'top'(默认) 或 'bottom'
+   * @param {string} options.align - 对齐方式 'top'(默认) 或 'bottom'
    */
   constructor(container, items = [], render = null, options = {}) {
     // 获取容器元素
@@ -39,7 +39,7 @@ class FastScrollView {
       // bufferThreshold 和 bufferSize 都支持（向后兼容）
       bufferThreshold: options.bufferThreshold || options.bufferSize || 2,
       onScroll: options.onScroll || null,
-      initialPosition: options.initialPosition || 'top', // 'top' 或 'bottom'
+      align: options.align || 'top', // 'top' 或 'bottom'
     };
 
     // 数据
@@ -158,8 +158,8 @@ class FastScrollView {
 
     // 如果还没有渲染任何内容，从当前滚动位置开始渲染
     if (this.renderedStartIndex === -1) {
-      // 如果设置为底部定位，从底部开始渲染
-      if (this.options.initialPosition === 'bottom') {
+      // 如果设置为底部对齐，从底部开始渲染
+      if (this.options.align === 'bottom') {
         this.renderFromBottom();
       } else {
         this.renderFromPosition(scrollTop);
@@ -274,7 +274,7 @@ class FastScrollView {
   }
 
   /**
-   * 从底部开始渲染（用于 initialPosition: 'bottom'）
+   * 从底部开始渲染（用于 align: 'bottom'）
    * 策略：从最后一项开始向前渲染，填满屏幕，然后滚动到底部
    */
   renderFromBottom() {
@@ -385,14 +385,14 @@ class FastScrollView {
   /**
    * 更新占位符高度
    * 使用固定大小的 spacer，足够触发滚动事件即可
-   * 当 initialPosition 为 'bottom' 且内容高度不足时，使用 topSpacer 将内容推到底部
+   * 当 align 为 'bottom' 且内容高度不足时，使用 topSpacer 将内容推到底部
    */
   updateSpacers() {
     const containerHeight = this.container.clientHeight || 800;
     const fixedSpacerHeight = containerHeight * 2;
     
     // 检查是否启用底部对齐模式
-    const isBottomAlign = this.options.initialPosition === 'bottom';
+    const isBottomAlign = this.options.align === 'bottom';
     
     // 检查是否所有内容都已渲染
     const allRendered = this.renderedStartIndex === 0 && this.renderedEndIndex === this.items.length;

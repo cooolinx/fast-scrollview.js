@@ -316,7 +316,7 @@
         <div class="example-content">
           <div class="example-title">底部对齐测试</div>
           <div class="example-description">
-            测试 initialPosition: "bottom" 参数，展示内容贴底显示效果，适合聊天应用场景。
+            测试 align: "bottom" 参数，展示内容贴底显示效果，适合聊天应用场景。
           </div>
           <div class="example-stats">
             <div class="stat">底部对齐</div>
@@ -348,8 +348,8 @@ const fsv = new FastScrollView(
   items,         // 数据
   render,        // 渲染函数
   {
-    bufferThreshold: 2,      // 缓冲阈值（可选）
-    initialPosition: 'top'   // 初始位置: 'top' 或 'bottom'（可选）
+    bufferThreshold: 2,  // 缓冲阈值（可选）
+    align: 'top'         // 对齐方式: 'top' 或 'bottom'（可选）
   }
 );
 
@@ -385,8 +385,8 @@ fsv.scrollToItem(5000);  // 跳转到 #5000，只渲染附近元素
             <div class="api-desc">缓冲阈值，默认为 2（提前 2 个屏幕高度触发渲染）</div>
           </li>
           <li class="api-item">
-            <div class="api-name">initialPosition: 'top' | 'bottom'</div>
-            <div class="api-desc">初始定位方式。'top' 从顶部开始（默认），'bottom' 从底部开始并自动贴底显示，适合聊天应用</div>
+            <div class="api-name">align: 'top' | 'bottom'</div>
+            <div class="api-desc">对齐方式。'top' 顶部对齐（默认），'bottom' 底部对齐并自动贴底显示，适合聊天应用</div>
           </li>
           <li class="api-item">
             <div class="api-name">onScroll(event)</div>
@@ -402,7 +402,7 @@ fsv.scrollToItem(5000);  // 跳转到 #5000，只渲染附近元素
         <ul class="api-list">
           <li class="api-item">
             <div class="api-name">setItems(items)</div>
-            <div class="api-desc">设置新的数据数组，会根据 initialPosition 自动定位到顶部或底部</div>
+            <div class="api-desc">设置新的数据数组，会根据 align 配置自动对齐到顶部或底部</div>
           </li>
           <li class="api-item">
             <div class="api-name">setItem(index, item)</div>

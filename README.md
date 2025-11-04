@@ -134,9 +134,9 @@ const fsv = new FastScrollView(
   items,                // 数据数组
   renderItem,           // 渲染函数
   {
-    bufferThreshold: 2,        // 缓冲阈值（可选，默认 2）
-    initialPosition: 'top',    // 初始位置（可选，'top' 或 'bottom'，默认 'top'）
-    onScroll: (info) => {      // 滚动回调（可选）
+    bufferThreshold: 2,   // 缓冲阈值（可选，默认 2）
+    align: 'top',         // 对齐方式（可选，'top' 或 'bottom'，默认 'top'）
+    onScroll: (info) => { // 滚动回调（可选）
       console.log('滚动中...', info);
     }
   }
@@ -161,7 +161,7 @@ new FastScrollView(container, items, render, options)
 - **render** (Function) - 渲染函数，签名：`(item, index, totalSize) => HTMLElement | string`
 - **options** (Object, 可选) - 配置选项
   - `bufferThreshold` (number) - 缓冲阈值，默认 2（表示提前2个屏幕高度触发渲染）
-  - `initialPosition` (string) - 初始定位方式，`'top'`（默认）或 `'bottom'`（底部对齐）
+  - `align` (string) - 对齐方式，`'top'`（默认）或 `'bottom'`（底部对齐）
   - `onScroll` (Function) - 滚动时的回调函数
 
 ### 数据操作方法
@@ -312,7 +312,7 @@ fsv.destroy();
 
 ## 🎯 底部对齐模式（聊天应用专用）
 
-FastScrollView 支持 `initialPosition: 'bottom'` 参数，特别适合聊天应用等需要从底部显示内容的场景。
+FastScrollView 支持 `align: 'bottom'` 参数，特别适合聊天应用等需要从底部显示内容的场景。
 
 ### 使用方法
 
@@ -322,7 +322,7 @@ const chatView = new FastScrollView(
   messages,
   renderMessage,
   {
-    initialPosition: 'bottom',  // 👈 启用底部对齐
+    align: 'bottom',  // 👈 启用底部对齐
     bufferThreshold: 2
   }
 );
@@ -337,7 +337,7 @@ const chatView = new FastScrollView(
 ### 效果对比
 
 ```javascript
-// 默认模式 (initialPosition: 'top')
+// 默认模式 (align: 'top')
 // 1-2 条消息时，从顶部开始显示
 ┌─────────────────┐
 │ 消息1           │
@@ -347,7 +347,7 @@ const chatView = new FastScrollView(
 │                 │
 └─────────────────┘
 
-// 底部对齐模式 (initialPosition: 'bottom')
+// 底部对齐模式 (align: 'bottom')
 // 1-2 条消息时，贴在底部显示
 ┌─────────────────┐
 │                 │
@@ -395,7 +395,7 @@ const chatView = new FastScrollView(
 
 ### 4. 底部对齐测试 (examples/bottom-align-test.html)
 
-测试 `initialPosition: 'bottom'` 参数的各种场景。
+测试 `align: 'bottom'` 参数的各种场景。
 
 - ✅ 测试 1-2 条消息贴底显示
 - ✅ 测试多条消息滚动到底部
