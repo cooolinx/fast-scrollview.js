@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FastScrollView - scrollToItem 性能测试</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f2f5;
+      padding: 20px;
+    }
+
+    .header {
+      max-width: 1200px;
+      margin: 0 auto 20px;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 32px;
+      color: #333;
+      margin-bottom: 10px;
+    }
+
+    .header p {
+      color: #666;
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+
+    .header .tip {
+      background: #d1ecf1;
+      color: #0c5460;
+      padding: 10px 20px;
+      border-radius: 8px;
+      display: inline-block;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+
+    .demo-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+
+    .demo-header {
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .demo-title {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .demo-subtitle {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+
+    .controls-panel {
+      padding: 20px;
+      background: #f8f9fa;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    .controls-row {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+    }
+
+    .controls-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .control-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .control-label {
+      font-size: 14px;
+      color: #495057;
+      font-weight: 500;
+    }
+
+    .input-number {
+      width: 100px;
+      padding: 8px 12px;
+      border: 1px solid #ced4da;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      background: #667eea;
+      color: white;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+
+    .btn:hover {
+      background: #5568d3;
+      transform: translateY(-1px);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn-success {
+      background: #28a745;
+    }
+
+    .btn-success:hover {
+      background: #218838;
+    }
+
+    .btn-primary {
+      background: #007bff;
+    }
+
+    .btn-primary:hover {
+      background: #0069d9;
+    }
+
+    .performance-info {
+      padding: 15px 20px;
+      background: #fff3cd;
+      border-bottom: 1px solid #ffeaa7;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+    }
+
+    .perf-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .perf-label {
+      font-size: 12px;
+      color: #856404;
+      font-weight: 500;
+    }
+
+    .perf-value {
+      font-size: 18px;
+      font-weight: 600;
+      color: #856404;
+    }
+
+    .perf-value.fast {
+      color: #28a745;
+    }
+
+    .scroll-container {
+      height: 500px;
+      overflow: auto;
+      background: white;
+    }
+
+    .item {
+      padding: 15px 20px;
+      border-bottom: 1px solid #e0e0e0;
+      transition: background 0.15s;
+    }
+
+    .item:hover {
+      background: #f8f9fa;
+    }
+
+    .item.highlight {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+    }
+
+    .item-title {
+      font-weight: 600;
+      color: #202124;
+      margin-bottom: 4px;
+    }
+
+    .item-subtitle {
+      font-size: 13px;
+      color: #5f6368;
+    }
+
+    .back-button {
+      display: inline-block;
+      margin-bottom: 20px;
+      padding: 10px 20px;
+      background: white;
+      color: #667eea;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      transition: all 0.2s;
+    }
+
+    .back-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    code {
+      background: #f8f9fa;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      color: #e83e8c;
+    }
+  </style>
+</head>
+<body>
+  <div style="max-width: 1200px; margin: 0 auto;">
+    <a href="index.html" class="back-button">← 返回示例列表</a>
+  </div>
+
+  <div class="header">
+    <h1>⚡ scrollToItem 性能优化测试</h1>
+    <p>演示优化后的 <code>scrollToItem()</code> 方法：已渲染的 item 不会重新渲染</p>
+    <div class="tip">
+      💡 提示：在已渲染范围内跳转时，性能提升明显！
+    </div>
+  </div>
+
+  <div class="demo-container">
+    <div class="demo-header">
+      <div class="demo-title">性能测试面板</div>
+      <div class="demo-subtitle">测试数据：10,000 条 | 观察性能差异</div>
+    </div>
+
+    <div class="controls-panel">
+      <div class="controls-row">
+        <div class="control-group">
+          <span class="control-label">跳转到项目：</span>
+          <input type="number" id="targetIndex" class="input-number" value="100" min="0" max="9999">
+        </div>
+        <button class="btn btn-primary" onclick="scrollToTarget()">跳转到指定项</button>
+      </div>
+
+      <div class="controls-row">
+        <button class="btn" onclick="scrollToItem(0)">跳转到 #0</button>
+        <button class="btn" onclick="scrollToItem(50)">跳转到 #50（附近）</button>
+        <button class="btn" onclick="scrollToItem(100)">跳转到 #100（附近）</button>
+        <button class="btn" onclick="scrollToItem(5000)">跳转到 #5000（远处）</button>
+        <button class="btn btn-success" onclick="scrollToItem(9999)">跳转到 #9999</button>
+      </div>
+    </div>
+
+    <div class="performance-info">
+      <div class="perf-item">
+        <div class="perf-label">渲染范围</div>
+        <div class="perf-value" id="renderRange">-</div>
+      </div>
+      <div class="perf-item">
+        <div class="perf-label">滚动耗时</div>
+        <div class="perf-value fast" id="scrollTime">-</div>
+      </div>
+      <div class="perf-item">
+        <div class="perf-label">是否重新渲染</div>
+        <div class="perf-value" id="rerendered">-</div>
+      </div>
+      <div class="perf-item">
+        <div class="perf-label">DOM 节点数</div>
+        <div class="perf-value" id="domCount">-</div>
+      </div>
+    </div>
+
+    <div id="scroll-container" class="scroll-container"></div>
+  </div>
+
+  <script src="../dist/fast-scrollview.min.js"></script>
+  <script>
+    // 生成测试数据
+    function generateItems(count) {
+      const items = [];
+      for (let i = 0; i < count; i++) {
+        items.push({
+          id: i,
+          title: `项目 #${i}`,
+          content: `这是第 ${i} 项的内容描述。索引: ${i}`
+        });
+      }
+      return items;
+    }
+
+    // 渲染函数
+    function renderItem(item, index) {
+      return `
+        <div class="item-title">${item.title}</div>
+        <div class="item-subtitle">${item.content}</div>
+      `;
+    }
+
+    // 创建 ScrollView 实例
+    const scrollView = new FastScrollView(
+      '#scroll-container',
+      generateItems(10000),
+      renderItem,
+      { bufferThreshold: 2 }
+    );
+
+    // 更新性能信息
+    function updatePerformanceInfo() {
+      const range = scrollView.getVisibleRange();
+      const domCount = scrollView.contentContainer.children.length;
+      
+      document.getElementById('renderRange').textContent = 
+        `#${range.start} - #${range.end} (${range.count} 项)`;
+      document.getElementById('domCount').textContent = domCount;
+    }
+
+    // 初始更新
+    setTimeout(updatePerformanceInfo, 100);
+
+    // 跳转到指定项
+    function scrollToItem(index) {
+      const startTime = performance.now();
+      const oldRange = scrollView.getVisibleRange();
+      
+      // 执行跳转
+      scrollView.scrollToItem(index);
+      
+      // 等待渲染完成后测量
+      setTimeout(() => {
+        const endTime = performance.now();
+        const duration = (endTime - startTime).toFixed(2);
+        const newRange = scrollView.getVisibleRange();
+        
+        // 判断是否重新渲染（如果范围完全改变，说明重新渲染了）
+        const rerendered = (oldRange.start !== newRange.start || oldRange.end !== newRange.end);
+        const wasInRange = index >= oldRange.start && index < oldRange.end;
+        
+        // 更新性能信息
+        document.getElementById('scrollTime').textContent = `${duration} ms`;
+        document.getElementById('scrollTime').className = duration < 10 ? 'perf-value fast' : 'perf-value';
+        
+        if (!wasInRange) {
+          document.getElementById('rerendered').textContent = '是（跳跃渲染）';
+          document.getElementById('rerendered').style.color = '#856404';
+        } else {
+          document.getElementById('rerendered').textContent = '否（直接滚动）';
+          document.getElementById('rerendered').style.color = '#28a745';
+        }
+        
+        updatePerformanceInfo();
+        
+        // 高亮目标项
+        highlightItem(index);
+      }, 100);
+    }
+
+    // 跳转到输入的目标
+    function scrollToTarget() {
+      const targetIndex = parseInt(document.getElementById('targetIndex').value);
+      if (isNaN(targetIndex) || targetIndex < 0 || targetIndex >= 10000) {
+        alert('请输入 0-9999 之间的数字');
+        return;
+      }
+      scrollToItem(targetIndex);
+    }
+
+    // 高亮指定项
+    function highlightItem(index) {
+      // 移除所有高亮
+      document.querySelectorAll('.item').forEach(el => el.classList.remove('highlight'));
+      
+      // 高亮目标项
+      const targetElement = scrollView.contentContainer.querySelector(`[data-index="${index}"]`);
+      if (targetElement) {
+        targetElement.classList.add('highlight');
+        
+        // 3秒后取消高亮
+        setTimeout(() => {
+          targetElement.classList.remove('highlight');
+        }, 3000);
+      }
+    }
+
+    // 监听滚动事件，更新性能信息
+    let updateTimeout;
+    document.getElementById('scroll-container').addEventListener('scroll', () => {
+      clearTimeout(updateTimeout);
+      updateTimeout = setTimeout(updatePerformanceInfo, 200);
+    });
+  </script>
+</body>
+</html>
+

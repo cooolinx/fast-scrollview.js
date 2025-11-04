@@ -668,6 +668,39 @@ class FastScrollView {
       return;
     }
 
+    // 优化：如果目标 item 已经渲染，直接滚动到该位置，不重新渲染
+    if (this.renderedStartIndex !== -1 && 
+        targetIndex >= this.renderedStartIndex && 
+        targetIndex < this.renderedEndIndex) {
+      
+      const targetElement = this.contentContainer.querySelector(`[data-index="${targetIndex}"]`);
+      
+      if (targetElement) {
+        // 计算目标元素的位置
+        let scrollTop;
+        
+        if (isBottom) {
+          // 底部对齐：将元素底部对齐到容器底部
+          const elementBottom = targetElement.offsetTop + targetElement.offsetHeight;
+          scrollTop = elementBottom - this.container.clientHeight;
+        } else {
+          // 顶部对齐：将元素顶部对齐到容器顶部
+          scrollTop = this.topSpacer.offsetHeight + targetElement.offsetTop;
+        }
+        
+        // 平滑滚动到目标位置
+        requestAnimationFrame(() => {
+          this.container.scrollTop = scrollTop;
+          
+          requestAnimationFrame(() => {
+            this.container.scrollTop = scrollTop;
+          });
+        });
+        
+        return;
+      }
+    }
+
     const containerHeight = this.container.clientHeight;
     
     // 清空当前渲染
@@ -766,6 +799,28 @@ class FastScrollView {
       end: this.renderedEndIndex,
       count: this.renderedEndIndex - this.renderedStartIndex,
     };
+  }
+
+  /**
+   * 判断是否滚动到底部
+   * 用于聊天应用场景：判断是否需要自动滚动到底部
+   * @param {number} threshold - 容差值（像素），默认为 10px
+   * @returns {boolean} 是否在底部
+   */
+  isAtScrollBottom(threshold = 10) {
+    if (this.items.length === 0) {
+      return true;
+    }
+
+    const scrollTop = this.container.scrollTop;
+    const clientHeight = this.container.clientHeight;
+    const scrollHeight = this.container.scrollHeight;
+
+    // 计算当前滚动位置的底部距离总高度底部的距离
+    const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
+
+    // 如果距离小于阈值，认为在底部
+    return distanceFromBottom <= threshold;
   }
 
   /**

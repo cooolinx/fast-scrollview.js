@@ -107,6 +107,14 @@
       background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
     }
 
+    .example-card:nth-child(7) .example-icon {
+      background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+    }
+
+    .example-card:nth-child(8) .example-icon {
+      background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+    }
+
     .example-content {
       padding: 25px;
     }
@@ -325,6 +333,36 @@
           <a href="bottom-align-test.html" class="view-button">查看示例 →</a>
         </div>
       </div>
+
+      <div class="example-card" onclick="location.href='chat-auto-scroll.html'">
+        <div class="example-icon">💬</div>
+        <div class="example-content">
+          <div class="example-title">聊天自动滚动</div>
+          <div class="example-description">
+            演示 isAtScrollBottom() 方法的实际应用，智能判断是否需要自动滚动。
+          </div>
+          <div class="example-stats">
+            <div class="stat">智能滚动</div>
+            <div class="stat">实时演示</div>
+          </div>
+          <a href="chat-auto-scroll.html" class="view-button">查看示例 →</a>
+        </div>
+      </div>
+
+      <div class="example-card" onclick="location.href='scroll-performance-test.html'">
+        <div class="example-icon">⚡</div>
+        <div class="example-content">
+          <div class="example-title">scrollToItem 性能测试</div>
+          <div class="example-description">
+            演示优化后的 scrollToItem：已渲染的 item 不会重新渲染，性能显著提升。
+          </div>
+          <div class="example-stats">
+            <div class="stat">性能优化</div>
+            <div class="stat">实时对比</div>
+          </div>
+          <a href="scroll-performance-test.html" class="view-button">查看示例 →</a>
+        </div>
+      </div>
     </div>
 
     <div class="info-section">
@@ -435,6 +473,10 @@ fsv.scrollToItem(5000);  // 跳转到 #5000，只渲染附近元素
           <li class="api-item">
             <div class="api-name">scrollToBottom()</div>
             <div class="api-desc">跳转到底部（内部调用 scrollToItem(最后一项)）</div>
+          </li>
+          <li class="api-item">
+            <div class="api-name">isAtScrollBottom(threshold?)</div>
+            <div class="api-desc">判断是否滚动到底部，用于聊天应用判断是否需要自动滚动（threshold 默认 10px）</div>
           </li>
           <li class="api-item">
             <div class="api-name">refresh()</div>

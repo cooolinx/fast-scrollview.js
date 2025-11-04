@@ -235,6 +235,7 @@ fsv.scrollToItem(item);
 **特点：**
 - ✅ 跳跃式渲染：只渲染目标位置附近的元素
 - ✅ 不会全量渲染：即使跳转到 #50000 也只渲染附近内容
+- ✅ 智能优化：如果目标 item 已渲染，直接滚动不重新渲染（性能更优）
 - ✅ 基于缓存计算：已访问过的位置使用精确的缓存高度
 
 #### scrollToTop()
@@ -272,6 +273,41 @@ const scrollTop = fsv.getScrollTop();
 ```javascript
 const range = fsv.getVisibleRange();
 // 返回: { start: 10, end: 30, count: 20 }
+```
+
+#### isAtScrollBottom(threshold)
+
+判断是否滚动到底部（用于聊天应用场景）。
+
+```javascript
+const isAtBottom = fsv.isAtScrollBottom();  // 默认容差 10px
+const isAtBottom2 = fsv.isAtScrollBottom(5); // 自定义容差 5px
+```
+
+**参数：**
+- `threshold` (number, 可选) - 容差值（像素），默认为 10px
+
+**返回值：**
+- `boolean` - 是否在底部
+
+**使用场景：**
+
+在聊天应用中，当用户正在查看历史消息时，新消息到来不应该自动滚动；只有当用户在底部时，才应该自动滚动到新消息。
+
+```javascript
+// 智能自动滚动示例
+function addNewMessage(message) {
+  // 添加消息前，先检查是否在底部
+  const wasAtBottom = chatView.isAtScrollBottom();
+  
+  // 添加新消息
+  chatView.append(message);
+  
+  // 只有之前在底部时，才自动滚动
+  if (wasAtBottom) {
+    chatView.scrollToBottom();
+  }
+}
 ```
 
 #### getItemCount()
@@ -400,6 +436,22 @@ const chatView = new FastScrollView(
 - ✅ 测试 1-2 条消息贴底显示
 - ✅ 测试多条消息滚动到底部
 - ✅ 与默认 top 对齐模式对比
+
+### 5. 聊天自动滚动 (examples/chat-auto-scroll.html)
+
+演示 `isAtScrollBottom()` 方法的实际应用。
+
+- ✅ 智能判断是否需要自动滚动
+- ✅ 对比智能滚动和强制滚动的体验差异
+- ✅ 实时消息流演示
+
+### 6. scrollToItem 性能测试 (examples/scroll-performance-test.html)
+
+测试优化后的 `scrollToItem()` 方法性能。
+
+- ✅ 演示已渲染 item 的直接滚动（无需重新渲染）
+- ✅ 实时性能指标显示
+- ✅ 对比跳跃渲染和直接滚动的性能差异
 
 ### 查看示例
 
