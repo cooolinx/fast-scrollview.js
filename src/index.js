@@ -43,7 +43,7 @@ class FastScrollView {
     };
 
     // 数据
-    this.items = items || [];
+    this.items = items ? [...items] : [];
     this.render = render;
 
     // 已渲染的范围（不再缓存高度，直接从 DOM 读取）
@@ -485,7 +485,7 @@ class FastScrollView {
    */
   setItems(items) {
     this.beginUpdate();
-    this.items = items || [];
+    this.items = items ? [...items] : [];
     this.renderedStartIndex = -1;
     this.renderedEndIndex = -1;
     this.contentContainer.innerHTML = '';
