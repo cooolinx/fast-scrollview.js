@@ -307,7 +307,7 @@
     // 更新统计信息
     function updateStats() {
       const range = fsv.getVisibleRange();
-      document.getElementById('total-count').textContent = fsv.getItemCount().toLocaleString();
+      document.getElementById('total-count').textContent = fsv.items.length.toLocaleString();
       document.getElementById('visible-range').textContent = `${range.start} - ${range.end}`;
       document.getElementById('rendered-count').textContent = range.count;
     }
@@ -338,7 +338,7 @@
         };
         fsv.append(item);
       }
-      addLog(`添加了 100 条新数据，总数: ${fsv.getItemCount()}`);
+      addLog(`添加了 100 条新数据，总数: ${fsv.items.length}`);
       updateStats();
     }
 

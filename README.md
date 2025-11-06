@@ -299,24 +299,6 @@ function addNewMessage(message) {
 }
 ```
 
-#### getItemCount()
-
-获取数据项总数。
-
-```javascript
-const count = fsv.getItemCount();
-```
-
-#### getTotalHeight()
-
-获取虚拟滚动的总高度（估算值）。
-
-```javascript
-const height = fsv.getTotalHeight();
-```
-
-**注意：** 此方法需要遍历所有元素，在大数据集下可能较慢，建议谨慎使用。
-
 ### 其他方法
 
 #### refresh()

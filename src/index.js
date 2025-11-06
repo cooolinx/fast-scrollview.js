@@ -498,28 +498,27 @@ class FastScrollView {
    * @param {*} item - 新的数据项
    */
   setItem(index, item) {
-    if (index >= 0 && index < this.items.length) {
-      this.items[index] = item;
-      
-      // 如果这个item已经被渲染，直接替换元素
-      if (index >= this.renderedStartIndex && index < this.renderedEndIndex) {
-        const existingElement = this.contentContainer.querySelector(`[data-index="${index}"]`);
-        if (existingElement) {
-          const newElement = this.createItemElement(item, index);
-          existingElement.replaceWith(newElement);
-          
-          // 元素高度可能变化，更新占位符
-          requestAnimationFrame(() => {
-            this.updateSpacers();
-          });
-          return;
-        }
+    if (index < 0 || index >= this.items.length) return;
+    this.items[index] = item;
+    
+    // 如果这个item已经被渲染，直接替换元素
+    if (index >= this.renderedStartIndex && index < this.renderedEndIndex) {
+      const existingElement = this.contentContainer.querySelector(`[data-index="${index}"]`);
+      if (existingElement) {
+        const newElement = this.createItemElement(item, index);
+        existingElement.replaceWith(newElement);
+        
+        // 元素高度可能变化，更新占位符
+        requestAnimationFrame(() => {
+          this.updateSpacers();
+        });
+        return;
       }
-      
-      // 如果不在已渲染范围内，调用 updateVisibleItems
-      if (!this.batchUpdateMode) {
-        this.updateVisibleItems();
-      }
+    }
+    
+    // 如果不在已渲染范围内，调用 updateVisibleItems
+    if (!this.batchUpdateMode) {
+      this.updateVisibleItems();
     }
   }
 
@@ -622,18 +621,95 @@ class FastScrollView {
       index = this.items.indexOf(itemOrIndex);
     }
 
-    if (index >= 0 && index < this.items.length) {
-      this.items.splice(index, 1);
-      
-      // 删除操作复杂，重新渲染
-      this.renderedStartIndex = -1;
-      this.renderedEndIndex = -1;
-      this.contentContainer.innerHTML = '';
+    if (index < 0 || index >= this.items.length) return;
+    
+    // 判断是否在已渲染范围内
+    const isInRenderedRange = this.renderedStartIndex !== -1 && 
+                              index >= this.renderedStartIndex && 
+                              index < this.renderedEndIndex;
+    
+    // 删除数据
+    this.items.splice(index, 1);
+    
+    // 情况1：不在可视范围内，只需调整索引
+    if (!isInRenderedRange) {
+      // 如果删除的位置在已渲染范围之前，需要调整索引
+      if (this.renderedStartIndex !== -1 && index < this.renderedStartIndex) {
+        this.renderedStartIndex--;
+        this.renderedEndIndex--;
+        
+        // 更新所有已渲染元素的 data-index
+        this.updateRenderedIndices();
+      } else if (this.renderedStartIndex !== -1 && index < this.renderedEndIndex) {
+        // 删除位置在已渲染范围内，但不在可视区域（理论上不应该发生，但做个保护）
+        this.renderedEndIndex--;
+        this.updateRenderedIndices();
+      }
       
       if (!this.batchUpdateMode) {
-        this.updateVisibleItems();
+        this.updateSpacers();
+      }
+      return;
+    }
+    
+    // 情况2：在可视范围内，移除 DOM 元素并补充
+    const elementToRemove = this.contentContainer.querySelector(`[data-index="${index}"]`);
+    if (elementToRemove) {
+      elementToRemove.remove();
+    }
+    
+    // 调整渲染范围
+    this.renderedEndIndex--;
+    
+    // 更新后续元素的索引
+    this.updateRenderedIndices();
+    
+    // 尝试补充元素：优先向下，其次向上
+    let isSuccess = false;
+    
+    // 优先向下补充
+    if (this.renderedEndIndex < this.items.length) {
+      const item = this.items[this.renderedEndIndex];
+      if (item !== undefined) {
+        const element = this.createItemElement(item, this.renderedEndIndex);
+        this.contentContainer.appendChild(element);
+        this.renderedEndIndex++;
+        isSuccess = true;
       }
     }
+    
+    // 如果向下没有元素，尝试向上补充
+    if (!isSuccess && this.renderedStartIndex > 0) {
+      this.renderedStartIndex--;
+      const item = this.items[this.renderedStartIndex];
+      if (item !== undefined) {
+        const element = this.createItemElement(item, this.renderedStartIndex);
+        this.contentContainer.insertBefore(element, this.contentContainer.firstChild);
+      }
+    }
+    
+    // 更新占位符
+    if (!this.batchUpdateMode) {
+      requestAnimationFrame(() => {
+        this.updateSpacers();
+      });
+    }
+  }
+  
+  /**
+   * 更新已渲染元素的 data-index 属性
+   * 在删除或插入操作后调用，确保 DOM 元素的索引与数据索引一致
+   */
+  updateRenderedIndices() {
+    if (this.renderedStartIndex === -1) return;
+    
+    const elements = this.contentContainer.querySelectorAll('[data-index]');
+    let currentIndex = this.renderedStartIndex;
+    
+    elements.forEach(element => {
+      element.setAttribute('data-index', currentIndex);
+      currentIndex++;
+    });
   }
 
   /**
@@ -824,9 +900,38 @@ class FastScrollView {
   }
 
   /**
-   * 刷新显示（清空所有已渲染内容，从当前位置重新渲染）
+   * 刷新当前已渲染的元素（保持渲染范围，重新调用 render 方法）
+   * 适用场景：数据内容变化但不改变滚动位置和渲染范围
    */
   refresh() {
+    // 如果没有已渲染的内容，直接返回
+    if (this.renderedStartIndex === -1 || this.renderedEndIndex === -1) {
+      return;
+    }
+
+    // 保存当前滚动位置
+    const scrollTop = this.container.scrollTop;
+    
+    // 重新渲染当前范围内的所有元素
+    for (let i = this.renderedStartIndex; i < this.renderedEndIndex; i++) {
+      const existingElement = this.contentContainer.querySelector(`[data-index="${i}"]`);
+      if (existingElement && this.items[i] !== undefined) {
+        const newElement = this.createItemElement(this.items[i], i);
+        existingElement.replaceWith(newElement);
+      }
+    }
+    
+    // 恢复滚动位置
+    requestAnimationFrame(() => {
+      this.container.scrollTop = scrollTop;
+    });
+  }
+
+  /**
+   * 重置显示（清空所有已渲染内容，从当前位置重新渲染）
+   * 适用场景：需要完全重新渲染整个视图
+   */
+  reset() {
     this.renderedStartIndex = -1;
     this.renderedEndIndex = -1;
     this.contentContainer.innerHTML = '';

@@ -215,7 +215,7 @@
     // 更新信息显示
     function updateInfo() {
       const range = fsv.getVisibleRange();
-      document.getElementById('total-count').textContent = fsv.getItemCount().toLocaleString();
+      document.getElementById('total-count').textContent = fsv.items.length.toLocaleString();
       document.getElementById('visible-range').textContent = `${range.start} - ${range.end}`;
       document.getElementById('rendered-count').textContent = range.count;
     }

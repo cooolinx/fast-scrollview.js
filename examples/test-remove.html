@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FastScrollView - Remove 功能测试</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      color: white;
+      text-align: center;
+      margin-bottom: 10px;
+      font-size: 2em;
+    }
+
+    .subtitle {
+      color: rgba(255, 255, 255, 0.9);
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 1.1em;
+    }
+
+    .main-layout {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 20px;
+      height: calc(100vh - 140px);
+    }
+
+    .control-panel {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      overflow-y: auto;
+    }
+
+    .section {
+      margin-bottom: 25px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .section:last-child {
+      border-bottom: none;
+    }
+
+    .section h3 {
+      color: #667eea;
+      margin-bottom: 15px;
+      font-size: 1.1em;
+    }
+
+    .button-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    button {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-weight: 500;
+      text-align: left;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+    }
+
+    .btn-warning {
+      background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+      color: #333;
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+      color: #333;
+    }
+
+    .input-group {
+      margin-bottom: 10px;
+    }
+
+    .input-group label {
+      display: block;
+      margin-bottom: 5px;
+      color: #666;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .input-group input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 14px;
+      transition: border-color 0.3s;
+    }
+
+    .input-group input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .stats {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      font-size: 13px;
+    }
+
+    .stats div {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      padding: 5px 0;
+    }
+
+    .stats div:last-child {
+      margin-bottom: 0;
+    }
+
+    .stats label {
+      color: #666;
+      font-weight: 500;
+    }
+
+    .stats span {
+      color: #333;
+      font-weight: 600;
+      font-family: 'Courier New', monospace;
+    }
+
+    .scroll-container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+      overflow: hidden;
+      height: 100%;
+    }
+
+    #scrollView {
+      height: 100%;
+      overflow: auto;
+    }
+
+    .item {
+      padding: 15px 20px;
+      border-bottom: 1px solid #eee;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .item:hover {
+      background: #f8f9fa;
+    }
+
+    .item-content {
+      flex: 1;
+    }
+
+    .item-index {
+      display: inline-block;
+      width: 60px;
+      font-weight: 600;
+      color: #667eea;
+      font-size: 14px;
+    }
+
+    .item-text {
+      color: #333;
+      font-size: 14px;
+    }
+
+    .item-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-remove {
+      padding: 6px 12px;
+      background: #ff4757;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-remove:hover {
+      background: #ff3838;
+      transform: scale(1.05);
+    }
+
+    .item.highlighted {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+    }
+
+    .log-container {
+      margin-top: 15px;
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 15px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .log-entry {
+      margin-bottom: 5px;
+      padding: 3px 0;
+    }
+
+    .log-entry.success {
+      color: #4ec9b0;
+    }
+
+    .log-entry.info {
+      color: #9cdcfe;
+    }
+
+    .log-entry.warning {
+      color: #dcdcaa;
+    }
+
+    .log-entry.error {
+      color: #f48771;
+    }
+
+    .quick-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .quick-actions button {
+      font-size: 12px;
+      padding: 8px 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🗑️ FastScrollView - Remove 功能测试</h1>
+    <p class="subtitle">测试智能删除：可视范围内/外的不同删除策略</p>
+
+    <div class="main-layout">
+      <!-- 控制面板 -->
+      <div class="control-panel">
+        <!-- 删除操作 -->
+        <div class="section">
+          <h3>🎯 删除操作</h3>
+          <div class="input-group">
+            <label>删除索引</label>
+            <input type="number" id="removeIndex" value="0" min="0">
+          </div>
+          <div class="button-group">
+            <button class="btn-danger" onclick="removeByIndex()">删除指定索引</button>
+            <button class="btn-danger" onclick="removeFirst()">删除第一项 (0)</button>
+            <button class="btn-danger" onclick="removeLast()">删除最后一项</button>
+            <button class="btn-danger" onclick="removeMiddle()">删除中间项</button>
+          </div>
+        </div>
+
+        <!-- 快捷删除 -->
+        <div class="section">
+          <h3>⚡ 批量删除测试</h3>
+          <div class="button-group">
+            <button class="btn-warning" onclick="removeMultipleOutside()">删除范围外 10 项</button>
+            <button class="btn-warning" onclick="removeMultipleInside()">删除范围内 5 项</button>
+            <button class="btn-warning" onclick="removeAlternate()">交替删除 10 项</button>
+          </div>
+        </div>
+
+        <!-- 滚动控制 -->
+        <div class="section">
+          <h3>📍 滚动定位</h3>
+          <div class="quick-actions">
+            <button class="btn-primary" onclick="scrollToTop()">顶部</button>
+            <button class="btn-primary" onclick="scrollToBottom()">底部</button>
+            <button class="btn-primary" onclick="scrollToMiddle()">中间</button>
+            <button class="btn-primary" onclick="scrollToIndex()">指定项</button>
+          </div>
+          <div class="input-group" style="margin-top: 10px;">
+            <label>滚动到索引</label>
+            <input type="number" id="scrollIndex" value="50" min="0">
+          </div>
+        </div>
+
+        <!-- 统计信息 -->
+        <div class="section">
+          <h3>📊 实时统计</h3>
+          <div class="stats">
+            <div>
+              <label>总数据量:</label>
+              <span id="totalCount">0</span>
+            </div>
+            <div>
+              <label>已渲染范围:</label>
+              <span id="renderedRange">-</span>
+            </div>
+            <div>
+              <label>渲染数量:</label>
+              <span id="renderedCount">0</span>
+            </div>
+            <div>
+              <label>当前滚动:</label>
+              <span id="scrollPos">0px</span>
+            </div>
+            <div>
+              <label>删除次数:</label>
+              <span id="removeCount">0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 工具 -->
+        <div class="section">
+          <h3>🔧 工具</h3>
+          <div class="button-group">
+            <button class="btn-success" onclick="reset()">重置数据 (1000项)</button>
+            <button class="btn-success" onclick="clearLog()">清空日志</button>
+            <button class="btn-success" onclick="highlightRendered()">高亮已渲染项</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 滚动视图 -->
+      <div class="scroll-container">
+        <div id="scrollView"></div>
+      </div>
+    </div>
+
+    <!-- 日志 -->
+    <div class="log-container" id="logContainer"></div>
+  </div>
+
+  <script src="../dist/fast-scrollview.min.js"></script>
+  <script>
+    let scrollView;
+    let removeCounter = 0;
+
+    // 生成测试数据
+    function generateItems(count) {
+      const items = [];
+      for (let i = 0; i < count; i++) {
+        items.push({
+          id: i,
+          text: `项目 ${i} - ${getRandomEmoji()} ${getRandomText()}`
+        });
+      }
+      return items;
+    }
+
+    function getRandomEmoji() {
+      const emojis = ['🎨', '🎯', '🎪', '🎭', '🎮', '🎰', '🎲', '🎵', '🎶', '🎸', '🎹', '🎺', '🎻', '🎼'];
+      return emojis[Math.floor(Math.random() * emojis.length)];
+    }
+
+    function getRandomText() {
+      const texts = [
+        '测试数据项', '示例内容', '虚拟滚动', '高性能渲染',
+        '智能删除', '动态补充', '范围检测', '索引更新'
+      ];
+      return texts[Math.floor(Math.random() * texts.length)];
+    }
+
+    // 渲染函数
+    function renderItem(item, index, total) {
+      return `
+        <div class="item-content">
+          <span class="item-index">#${index}</span>
+          <span class="item-text">${item.text}</span>
+        </div>
+        <div class="item-actions">
+          <button class="btn-remove" onclick="removeByIndex(${index})">删除</button>
+        </div>
+      `;
+    }
+
+    // 日志函数
+    function log(message, type = 'info') {
+      const logContainer = document.getElementById('logContainer');
+      const timestamp = new Date().toLocaleTimeString();
+      const logEntry = document.createElement('div');
+      logEntry.className = `log-entry ${type}`;
+      logEntry.textContent = `[${timestamp}] ${message}`;
+      logContainer.appendChild(logEntry);
+      logContainer.scrollTop = logContainer.scrollHeight;
+    }
+
+    // 更新统计信息
+    function updateStats() {
+      const range = scrollView.getVisibleRange();
+      document.getElementById('totalCount').textContent = scrollView.items.length;
+      document.getElementById('renderedRange').textContent = 
+        range.start !== undefined ? `${range.start} - ${range.end}` : '-';
+      document.getElementById('renderedCount').textContent = range.count || 0;
+      document.getElementById('scrollPos').textContent = 
+        Math.round(scrollView.container.scrollTop) + 'px';
+      document.getElementById('removeCount').textContent = removeCounter;
+    }
+
+    // 初始化
+    function init() {
+      const items = generateItems(1000);
+      
+      scrollView = new FastScrollView(
+        '#scrollView',
+        items,
+        renderItem,
+        {
+          bufferThreshold: 2,
+          onScroll: (info) => {
+            updateStats();
+          }
+        }
+      );
+
+      log('✅ 初始化完成，生成 1000 项数据', 'success');
+      updateStats();
+
+      // 滚动到中间位置方便测试
+      setTimeout(() => {
+        scrollView.scrollToItem(50);
+        log('📍 已滚动到索引 50', 'info');
+      }, 100);
+    }
+
+    // 删除操作
+    function removeByIndex(index) {
+      if (index === undefined) {
+        index = parseInt(document.getElementById('removeIndex').value);
+      }
+
+      const range = scrollView.getVisibleRange();
+      const isInRange = index >= range.start && index < range.end;
+      const oldCount = scrollView.items.length;
+
+      if (index < 0 || index >= oldCount) {
+        log(`❌ 无效索引: ${index}`, 'error');
+        return;
+      }
+
+      scrollView.remove(index);
+      removeCounter++;
+
+      const inRangeText = isInRange ? '✅ 范围内' : '⚪ 范围外';
+      log(`🗑️ 删除索引 ${index} ${inRangeText} (剩余 ${scrollView.items.length} 项)`, 
+          isInRange ? 'warning' : 'info');
+      
+      updateStats();
+    }
+
+    function removeFirst() {
+      removeByIndex(0);
+    }
+
+    function removeLast() {
+      removeByIndex(scrollView.items.length - 1);
+    }
+
+    function removeMiddle() {
+      const middle = Math.floor(scrollView.items.length / 2);
+      removeByIndex(middle);
+    }
+
+    // 批量删除
+    function removeMultipleOutside() {
+      const range = scrollView.getVisibleRange();
+      const startIndex = Math.max(0, range.end + 100);
+      
+      log(`🔄 开始批量删除范围外 10 项 (从索引 ${startIndex})`, 'warning');
+      
+      scrollView.beginUpdate();
+      for (let i = 0; i < 10; i++) {
+        if (startIndex < scrollView.items.length) {
+          scrollView.remove(startIndex);
+          removeCounter++;
+        }
+      }
+      scrollView.endUpdate();
+      
+      log(`✅ 完成批量删除 (剩余 ${scrollView.items.length} 项)`, 'success');
+      updateStats();
+    }
+
+    function removeMultipleInside() {
+      const range = scrollView.getVisibleRange();
+      const startIndex = Math.floor((range.start + range.end) / 2);
+      
+      log(`🔄 开始批量删除范围内 5 项 (从索引 ${startIndex})`, 'warning');
+      
+      scrollView.beginUpdate();
+      for (let i = 0; i < 5; i++) {
+        if (startIndex < scrollView.items.length) {
+          scrollView.remove(startIndex);
+          removeCounter++;
+        }
+      }
+      scrollView.endUpdate();
+      
+      log(`✅ 完成批量删除 (剩余 ${scrollView.items.length} 项)`, 'success');
+      updateStats();
+    }
+
+    function removeAlternate() {
+      const range = scrollView.getVisibleRange();
+      log(`🔄 开始交替删除 10 项`, 'warning');
+      
+      scrollView.beginUpdate();
+      for (let i = 0; i < 10; i++) {
+        const index = i % 2 === 0 ? range.start : range.end - 1;
+        if (index >= 0 && index < scrollView.items.length) {
+          scrollView.remove(index);
+          removeCounter++;
+        }
+      }
+      scrollView.endUpdate();
+      
+      log(`✅ 完成交替删除 (剩余 ${scrollView.items.length} 项)`, 'success');
+      updateStats();
+    }
+
+    // 滚动操作
+    function scrollToTop() {
+      scrollView.scrollToTop();
+      log('📍 滚动到顶部', 'info');
+    }
+
+    function scrollToBottom() {
+      scrollView.scrollToBottom();
+      log('📍 滚动到底部', 'info');
+    }
+
+    function scrollToMiddle() {
+      const middle = Math.floor(scrollView.items.length / 2);
+      scrollView.scrollToItem(middle);
+      log(`📍 滚动到中间 (索引 ${middle})`, 'info');
+    }
+
+    function scrollToIndex() {
+      const index = parseInt(document.getElementById('scrollIndex').value);
+      if (index >= 0 && index < scrollView.items.length) {
+        scrollView.scrollToItem(index);
+        log(`📍 滚动到索引 ${index}`, 'info');
+      } else {
+        log(`❌ 无效索引: ${index}`, 'error');
+      }
+    }
+
+    // 工具函数
+    function reset() {
+      removeCounter = 0;
+      const items = generateItems(1000);
+      scrollView.setItems(items);
+      log('🔄 已重置数据到 1000 项', 'success');
+      updateStats();
+      
+      setTimeout(() => {
+        scrollView.scrollToItem(50);
+        log('📍 已滚动到索引 50', 'info');
+      }, 100);
+    }
+
+    function clearLog() {
+      document.getElementById('logContainer').innerHTML = '';
+      log('🧹 日志已清空', 'info');
+    }
+
+    function highlightRendered() {
+      // 移除所有高亮
+      document.querySelectorAll('.item').forEach(item => {
+        item.classList.remove('highlighted');
+      });
+
+      // 高亮当前渲染的项
+      const range = scrollView.getVisibleRange();
+      for (let i = range.start; i < range.end; i++) {
+        const element = scrollView.contentContainer.querySelector(`[data-index="${i}"]`);
+        if (element && element.parentElement) {
+          element.parentElement.classList.add('highlighted');
+        }
+      }
+
+      log(`✨ 已高亮渲染范围 ${range.start}-${range.end}`, 'success');
+      
+      // 3秒后移除高亮
+      setTimeout(() => {
+        document.querySelectorAll('.item').forEach(item => {
+          item.classList.remove('highlighted');
+        });
+      }, 3000);
+    }
+
+    // 页面加载完成后初始化
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
+
