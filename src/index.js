@@ -20,6 +20,7 @@ class FastScrollView {
    * @param {Function} options.onScroll - 滚动回调
    * @param {string} options.align - 对齐方式 'top'(默认) 或 'bottom'
    * @param {number} options.batchSize - 每批渲染的元素数量（默认20）
+   * @param {HTMLElement|string} options.loader - 自定义加载指示器（HTMLElement 或 HTML 字符串）
    */
   constructor(container, items = [], render = null, options = {}) {
     // 获取容器元素
@@ -41,6 +42,7 @@ class FastScrollView {
       bufferThreshold: options.bufferThreshold || options.bufferSize || 2,
       onScroll: options.onScroll || null,
       align: options.align || 'top', // 'top' 或 'bottom'
+      loader: options.loader || null, // 自定义 loader 元素或 HTML 字符串
     };
 
     // 批处理大小
@@ -117,39 +119,25 @@ class FastScrollView {
    */
   _createLoader() {
     const loader = document.createElement('div');
+    loader.style.display = 'none';
+    loader.className = 'fast-scrollview-loading';
     loader.style.cssText = `
       display: none;
       justify-content: center;
       align-items: center;
-      padding: 20px;
-      font-size: 14px;
-      color: #666;
     `;
 
-    const spinner = document.createElement('div');
-    spinner.style.cssText = `
-      width: 20px;
-      height: 20px;
-      border: 2px solid #f3f3f3;
-      border-top: 2px solid #3498db;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    `;
-
-    // 添加旋转动画
-    if (!document.getElementById('fast-scrollview-spinner-keyframes')) {
-      const style = document.createElement('style');
-      style.id = 'fast-scrollview-spinner-keyframes';
-      style.textContent = `
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `;
-      document.head.appendChild(style);
+    // 如果提供了自定义 loader，使用自定义内容
+    if (this.options.loader) {
+      if (typeof this.options.loader === 'string') {
+        // 如果是字符串，直接设置为 innerHTML
+        loader.innerHTML = this.options.loader;
+      } else if (this.options.loader instanceof HTMLElement) {
+        // 如果是 DOM 元素，克隆并添加
+        loader.appendChild(this.options.loader.cloneNode(true));
+      }
     }
-
-    loader.appendChild(spinner);
+    // 否则保持为空容器，用户可以通过 CSS 自定义样式
     return loader;
   }
 
