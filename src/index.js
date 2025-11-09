@@ -56,11 +56,13 @@ class FastScrollView {
 
     // DOM 元素
     this.contentContainer = null;
-    this.topSpacer = null;
-    this.bottomSpacer = null;
+    this.topSpacer = null;  // 用于 bottom-align 时将内容推到底部
+    this.topLoader = null;
+    this.bottomLoader = null;
 
     // 内部状态标志
     this.isUpdating = false;
+    this.isLoadingMore = false;
     this.boundHandleScroll = null;
     this.scrollRaf = null;
     this.lastScrollTop = 0;
@@ -81,21 +83,26 @@ class FastScrollView {
     this.container.style.overflow = 'auto';
     this.container.style.position = 'relative';
 
-    // 创建顶部占位符
+    // 创建顶部占位符（用于 bottom-align）
     this.topSpacer = document.createElement('div');
     this.topSpacer.style.height = '0px';
+
+    // 创建顶部加载指示器
+    this.topLoader = this._createLoader();
+    this.topLoader.style.display = 'none';
 
     // 创建内容容器
     this.contentContainer = document.createElement('div');
 
-    // 创建底部占位符
-    this.bottomSpacer = document.createElement('div');
-    this.bottomSpacer.style.height = '0px';
+    // 创建底部加载指示器
+    this.bottomLoader = this._createLoader();
+    this.bottomLoader.style.display = 'none';
 
     // 组装 DOM（直接添加到 container）
     this.container.appendChild(this.topSpacer);
+    this.container.appendChild(this.topLoader);
     this.container.appendChild(this.contentContainer);
-    this.container.appendChild(this.bottomSpacer);
+    this.container.appendChild(this.bottomLoader);
 
     // 绑定滚动事件
     this.boundHandleScroll = this.handleScroll.bind(this);
@@ -106,10 +113,52 @@ class FastScrollView {
   }
 
   /**
+   * 创建加载指示器
+   */
+  _createLoader() {
+    const loader = document.createElement('div');
+    loader.style.cssText = `
+      display: none;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      font-size: 14px;
+      color: #666;
+    `;
+
+    const spinner = document.createElement('div');
+    spinner.style.cssText = `
+      width: 20px;
+      height: 20px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #3498db;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    `;
+
+    // 添加旋转动画
+    if (!document.getElementById('fast-scrollview-spinner-keyframes')) {
+      const style = document.createElement('style');
+      style.id = 'fast-scrollview-spinner-keyframes';
+      style.textContent = `
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    loader.appendChild(spinner);
+    return loader;
+  }
+
+
+  /**
    * 处理滚动事件
    */
   handleScroll() {
-    if (this.isUpdating) return;
+    if (this.isUpdating || this.isLoadingMore) return;
     if (this.scrollRaf) return;
     this.scrollRaf = requestAnimationFrame(() => {
       this.scrollRaf = null;
@@ -119,8 +168,8 @@ class FastScrollView {
       if (Math.abs(newScrollTop - this.lastScrollTop) < 1) return;
       this.lastScrollTop = newScrollTop;
 
-      // 重新渲染可视区域
-      this._updateVisibleItems();
+      // 检查是否滚动到边界
+      this._checkScrollBoundary();
 
       if (this.options.onScroll) {
         const range = this.getVisibleRange();
@@ -130,6 +179,94 @@ class FastScrollView {
           visibleEnd: range.end,
         });
       }
+    });
+  }
+
+  /**
+   * 检查是否滚动到边界，如果是则显示 loading 并加载更多内容
+   */
+  async _checkScrollBoundary() {
+    if (this.items.length === 0 || this.renderedStartIndex === -1) return;
+
+    const containerHeight = this.container.clientHeight;
+    const scrollTop = this.container.scrollTop;
+    const scrollHeight = this.container.scrollHeight;
+    const scrollBottom = scrollTop + containerHeight;
+
+    const threshold = 100; // 触发阈值（像素）
+
+    // 检查是否滚动到底部边界（考虑 bottomLoader 的高度）
+    if (scrollBottom >= scrollHeight - threshold && this.renderedEndIndex < this.items.length) {
+      await this._loadMoreDown();
+      return;
+    }
+
+    // 检查是否滚动到顶部边界（考虑 topLoader 的高度）
+    if (scrollTop <= threshold && this.renderedStartIndex > 0) {
+      await this._loadMoreUp();
+      return;
+    }
+  }
+
+  /**
+   * 向下加载更多内容
+   */
+  async _loadMoreDown() {
+    if (this.isLoadingMore || this.renderedEndIndex >= this.items.length) return;
+
+    this.isLoadingMore = true;
+    this.bottomLoader.style.display = 'flex';
+
+    // 使用 Promise 来等待渲染完成
+    await new Promise(resolve => {
+      requestAnimationFrame(() => {
+        const containerHeight = this.container.clientHeight;
+        const targetHeight = containerHeight * this.options.bufferThreshold;
+        this._expandDown(targetHeight);
+
+        requestAnimationFrame(() => {
+          this.bottomLoader.style.display = 'none';
+          this.isLoadingMore = false;
+          resolve();
+        });
+      });
+    });
+  }
+
+  /**
+   * 向上加载更多内容
+   */
+  async _loadMoreUp() {
+    if (this.isLoadingMore || this.renderedStartIndex <= 0) return;
+
+    this.isLoadingMore = true;
+    this.topLoader.style.display = 'flex';
+
+    // 保存当前滚动位置
+    const oldScrollHeight = this.container.scrollHeight;
+    const oldScrollTop = this.container.scrollTop;
+
+    // 使用 Promise 来等待渲染完成
+    await new Promise(resolve => {
+      requestAnimationFrame(() => {
+        const containerHeight = this.container.clientHeight;
+        const targetHeight = containerHeight * this.options.bufferThreshold;
+        this._expandUp(targetHeight);
+
+        requestAnimationFrame(() => {
+          // 恢复滚动位置（补偿新增内容的高度）
+          const newScrollHeight = this.container.scrollHeight;
+          const heightDiff = newScrollHeight - oldScrollHeight;
+          this.container.scrollTop = oldScrollTop + heightDiff;
+
+          // 如果所有内容都加载完了，调整底部对齐
+          this._adjustBottomAlign();
+
+          this.topLoader.style.display = 'none';
+          this.isLoadingMore = false;
+          resolve();
+        });
+      });
     });
   }
 
@@ -197,7 +334,8 @@ class FastScrollView {
     if (this.items.length === 0) {
       this.contentContainer.innerHTML = '';
       this.topSpacer.style.height = '0px';
-      this.bottomSpacer.style.height = '0px';
+      this.topLoader.style.display = 'none';
+      this.bottomLoader.style.display = 'none';
       return;
     }
 
@@ -219,42 +357,7 @@ class FastScrollView {
       return;
     }
 
-    // 计算已渲染区域的位置（直接从 DOM 读取，不使用估算）
-    const renderedTop = this.topSpacer.offsetHeight;
-    const renderedBottom = renderedTop + this.contentContainer.offsetHeight;
-    const expandThreshold = containerHeight * this.options.bufferThreshold;
-
-    // 检查是否需要扩展
-    const targetBottom = scrollBottom + expandThreshold;
-    const targetTop = scrollTop - expandThreshold;
-    const needExpandDown = renderedBottom < targetBottom && this.renderedEndIndex < this.items.length;
-    const needExpandUp = renderedTop > targetTop && this.renderedStartIndex > 0;
-
-    // 如果不需要任何扩展，直接返回
-    if (!needExpandDown && !needExpandUp) {
-      this.isUpdating = false;
-      return;
-    }
-
-    // 向下扩展
-    if (needExpandDown) {
-      const targetHeight = targetBottom - renderedBottom;
-      this._expandDown(targetHeight);
-    }
-
-    // 向上扩展
-    if (needExpandUp) {
-      const targetHeight = renderedTop - targetTop;
-      this._expandUp(targetHeight);
-    }
-
-    // 更新占位符
-    this.updateSpacers();
-
-    // 重置更新标志
-    setTimeout(() => {
-      this.isUpdating = false;
-    }, 50);
+    this.isUpdating = false;
   }
 
   /**
@@ -276,8 +379,6 @@ class FastScrollView {
     // 使用通用的向下扩展方法
     const targetHeight = containerHeight + expandThreshold;
     this._expandDown(targetHeight);
-
-    this.updateSpacers();
   }
 
   /**
@@ -301,8 +402,8 @@ class FastScrollView {
     this.renderedEndIndex = this.items.length;
     this._expandUp(targetHeight);
 
-    // 更新占位符（会自动处理底部对齐）
-    this.updateSpacers();
+    // 调整底部对齐
+    this._adjustBottomAlign();
 
     // 立即滚动到底部（在 DOM 更新的同一帧）
     this.container.scrollTop = this.container.scrollHeight;
@@ -310,6 +411,41 @@ class FastScrollView {
     // 确保滚动位置正确
     requestAnimationFrame(() => {
       this.container.scrollTop = this.container.scrollHeight;
+    });
+  }
+
+  /**
+   * 调整底部对齐：当内容不足一屏时，使用 topSpacer 将内容推到底部
+   */
+  _adjustBottomAlign() {
+    if (this.options.align !== 'bottom') {
+      this.topSpacer.style.height = '0px';
+      return;
+    }
+
+    // 检查是否所有内容都已渲染
+    const allRendered = this.renderedStartIndex === 0 && this.renderedEndIndex === this.items.length;
+
+    if (!allRendered || this.items.length === 0) {
+      this.topSpacer.style.height = '0px';
+      return;
+    }
+
+    // 测量内容高度（需要在下一帧测量以确保 DOM 已更新）
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const containerHeight = this.container.clientHeight;
+        const contentHeight = this.contentContainer.offsetHeight;
+
+        if (contentHeight < containerHeight) {
+          // 内容不足一屏，使用 topSpacer 推到底部
+          const paddingHeight = containerHeight - contentHeight;
+          this.topSpacer.style.height = `${paddingHeight}px`;
+        } else {
+          // 内容足够，不需要占位
+          this.topSpacer.style.height = '0px';
+        }
+      });
     });
   }
 
@@ -361,46 +497,11 @@ class FastScrollView {
     return Math.max(0, this.items.length - 1);
   }
 
-  /**
-   * 更新占位符高度
-   * 使用固定大小的 spacer，足够触发滚动事件即可
-   * 当 align 为 'bottom' 且内容高度不足时，使用 topSpacer 将内容推到底部
-   */
-  updateSpacers() {
-    const containerHeight = this.container.clientHeight || 800;
-    const fixedSpacerHeight = containerHeight * 2;
-
-    // 检查是否启用底部对齐模式
-    const isBottomAlign = this.options.align === 'bottom';
-
-    // 检查是否所有内容都已渲染
-    const allRendered = this.renderedStartIndex === 0 && this.renderedEndIndex === this.items.length;
-
-    if (isBottomAlign && allRendered && this.items.length > 0) {
-      // 底部对齐模式：如果内容高度不足，用 topSpacer 推到底部
-      const contentHeight = this.contentContainer.offsetHeight;
-
-      if (contentHeight < containerHeight) {
-        // 内容不足一屏，使用 topSpacer 推到底部
-        const paddingHeight = containerHeight - contentHeight;
-        this.topSpacer.style.height = `${paddingHeight}px`;
-        this.bottomSpacer.style.height = '0px';
-      } else {
-        // 内容足够，正常显示
-        this.topSpacer.style.height = '0px';
-        this.bottomSpacer.style.height = '0px';
-      }
-    } else {
-      // 默认模式或有未渲染内容：使用固定 spacer
-      this.topSpacer.style.height = this.renderedStartIndex > 0 ? `${fixedSpacerHeight}px` : '0px';
-      this.bottomSpacer.style.height = this.renderedEndIndex < this.items.length ? `${fixedSpacerHeight}px` : '0px';
-    }
-  }
 
   /**
    * 渲染指定范围内的元素
-   * @param {number} startIndex 
-   * @param {number} endIndex 
+   * @param {number} startIndex
+   * @param {number} endIndex
    * @returns {DocumentFragment} 渲染后的文档片段
    */
   _renderItems(startIndex, endIndex) {
@@ -448,6 +549,7 @@ class FastScrollView {
   _endUpdate() {
     this.batchUpdateMode = false;
     this._updateVisibleItems();
+    this._adjustBottomAlign();
   }
 
 
@@ -495,11 +597,6 @@ class FastScrollView {
       if (existingElement) {
         const newElement = this._createItemElement(item, index);
         existingElement.replaceWith(newElement);
-
-        // 元素高度可能变化，更新占位符
-        requestAnimationFrame(() => {
-          this.updateSpacers();
-        });
         return;
       }
     }
@@ -605,9 +702,6 @@ class FastScrollView {
         this._updateRenderedIndices();
       }
 
-      if (!this.batchUpdateMode) {
-        this.updateSpacers();
-      }
       return;
     }
 
@@ -645,13 +739,6 @@ class FastScrollView {
         const element = this._createItemElement(item, this.renderedStartIndex);
         this.contentContainer.insertBefore(element, this.contentContainer.firstChild);
       }
-    }
-
-    // 更新占位符
-    if (!this.batchUpdateMode) {
-      requestAnimationFrame(() => {
-        this.updateSpacers();
-      });
     }
   }
 
@@ -704,7 +791,7 @@ class FastScrollView {
           scrollTop = elementBottom - this.container.clientHeight;
         } else {
           // 顶部对齐：将元素顶部对齐到容器顶部
-          scrollTop = this.topSpacer.offsetHeight + targetElement.offsetTop;
+          scrollTop = targetElement.offsetTop;
         }
 
         // 平滑滚动到目标位置
@@ -725,22 +812,22 @@ class FastScrollView {
     // 清空当前渲染
     this.contentContainer.innerHTML = '';
 
-    const targetHeight = containerHeight * (1 + this.options.bufferThreshold);
+    // 计算渲染范围：向上和向下都渲染 bufferThreshold 倍的屏幕高度
+    const bufferHeight = containerHeight * this.options.bufferThreshold;
+    const downTargetHeight = containerHeight + bufferHeight;  // 可见区域 + 下方缓冲
+    const upTargetHeight = bufferHeight;  // 上方缓冲
 
-    // 第一阶段：从目标项开始向后渲染，直到填满 targetHeight 或到达末尾
+    // 第一阶段：从目标项开始向下渲染
     this.renderedStartIndex = targetIndex;
     this.renderedEndIndex = targetIndex;
-    const downHeight = this._expandDown(targetHeight);
+    this._expandDown(downTargetHeight);
 
-    // 第二阶段：如果还没填满，从目标项向前渲染
-    const remainingHeight = targetHeight - downHeight;
-    const prependHeight = remainingHeight > 0 ? this._expandUp(remainingHeight) : 0;
+    // 第二阶段：从目标项向上渲染
+    const prependHeight = this._expandUp(upTargetHeight);
 
-    this.updateSpacers();
-
-    // 滚动到目标位置（topSpacer高度 + 目标项之前的内容高度）
+    // 滚动到目标位置
     requestAnimationFrame(() => {
-      const targetScrollTop = alignBottom ? this.container.scrollHeight : this.topSpacer.offsetHeight + prependHeight;
+      const targetScrollTop = alignBottom ? this.container.scrollHeight : prependHeight;
       this.container.scrollTop = targetScrollTop;
 
       requestAnimationFrame(() => {
