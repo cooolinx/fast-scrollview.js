@@ -109,23 +109,14 @@ class FastScrollView {
    * 处理滚动事件
    */
   handleScroll() {
-    if (this.isUpdating) {
-      return;
-    }
-
-    if (this.scrollRaf) {
-      return;
-    }
-
+    if (this.isUpdating) return;
+    if (this.scrollRaf) return;
     this.scrollRaf = requestAnimationFrame(() => {
       this.scrollRaf = null;
 
+      // 是否有滚动
       const newScrollTop = this.container.scrollTop;
-
-      if (Math.abs(newScrollTop - this.lastScrollTop) < 1) {
-        return;
-      }
-
+      if (Math.abs(newScrollTop - this.lastScrollTop) < 1) return;
       this.lastScrollTop = newScrollTop;
 
       // 重新渲染可视区域
@@ -147,7 +138,7 @@ class FastScrollView {
    * @param {number} targetHeight - 目标高度
    * @returns {number} 累计渲染的高度
    */
-  _renderDown(targetHeight) {
+  _expandDown(targetHeight) {
     const batchSize = this.batchSize;
     let accumulatedHeight = 0;
 
@@ -167,7 +158,7 @@ class FastScrollView {
    * @param {number} targetHeight - 目标高度
    * @returns {number} 累计渲染的高度
    */
-  _renderUp(targetHeight) {
+  _expandUp(targetHeight) {
     const batchSize = this.batchSize;
     let accumulatedHeight = 0;
 
@@ -248,13 +239,13 @@ class FastScrollView {
     // 向下扩展
     if (needExpandDown) {
       const targetHeight = targetBottom - renderedBottom;
-      this._renderDown(targetHeight);
+      this._expandDown(targetHeight);
     }
 
     // 向上扩展
     if (needExpandUp) {
       const targetHeight = renderedTop - targetTop;
-      this._renderUp(targetHeight);
+      this._expandUp(targetHeight);
     }
 
     // 更新占位符
@@ -284,7 +275,7 @@ class FastScrollView {
 
     // 使用通用的向下扩展方法
     const targetHeight = containerHeight + expandThreshold;
-    this._renderDown(targetHeight);
+    this._expandDown(targetHeight);
 
     this.updateSpacers();
   }
@@ -308,7 +299,7 @@ class FastScrollView {
     // 从最后一项开始，使用通用的向上扩展方法
     this.renderedStartIndex = this.items.length;
     this.renderedEndIndex = this.items.length;
-    this._renderUp(targetHeight);
+    this._expandUp(targetHeight);
 
     // 更新占位符（会自动处理底部对齐）
     this.updateSpacers();
@@ -739,11 +730,11 @@ class FastScrollView {
     // 第一阶段：从目标项开始向后渲染，直到填满 targetHeight 或到达末尾
     this.renderedStartIndex = targetIndex;
     this.renderedEndIndex = targetIndex;
-    const downHeight = this._renderDown(targetHeight);
+    const downHeight = this._expandDown(targetHeight);
 
     // 第二阶段：如果还没填满，从目标项向前渲染
     const remainingHeight = targetHeight - downHeight;
-    const prependHeight = remainingHeight > 0 ? this._renderUp(remainingHeight) : 0;
+    const prependHeight = remainingHeight > 0 ? this._expandUp(remainingHeight) : 0;
 
     this.updateSpacers();
 
