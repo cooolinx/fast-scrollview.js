@@ -173,9 +173,20 @@ class FastScrollView {
     const renderedBottom = renderedTop + this.contentContainer.offsetHeight;
     const expandThreshold = containerHeight * this.options.bufferThreshold;
 
-    // 检查是否需要向下扩展
+    // 检查是否需要扩展
     const targetBottom = scrollBottom + expandThreshold;
-    if (renderedBottom < targetBottom && this.renderedEndIndex < this.items.length) {
+    const targetTop = scrollTop - expandThreshold;
+    const needExpandDown = renderedBottom < targetBottom && this.renderedEndIndex < this.items.length;
+    const needExpandUp = renderedTop > targetTop && this.renderedStartIndex > 0;
+    
+    // 如果不需要任何扩展，直接返回
+    if (!needExpandDown && !needExpandUp) {
+      this.isUpdating = false;
+      return;
+    }
+
+    // 检查是否需要向下扩展
+    if (needExpandDown) {
       // 分批渲染、测量，直到达到目标高度
       const batchSize = 10;
       let currentHeight = renderedBottom;
@@ -199,8 +210,7 @@ class FastScrollView {
     }
 
     // 检查是否需要向上扩展
-    const targetTop = scrollTop - expandThreshold;
-    if (renderedTop > targetTop && this.renderedStartIndex > 0) {
+    if (needExpandUp) {
       // 分批渲染、测量，直到达到目标高度
       const batchSize = 10;
       let currentHeight = renderedTop;
