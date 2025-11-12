@@ -68,7 +68,6 @@ class FastScrollView {
     this.boundHandleScroll = null;
     this.scrollRaf = null;
     this.lastScrollTop = 0;
-    this.batchUpdateMode = false;
 
     // 初始化
     this.init();
@@ -153,18 +152,19 @@ class FastScrollView {
 
       // 是否有滚动
       const newScrollTop = this.container.scrollTop;
-      if (Math.abs(newScrollTop - this.lastScrollTop) < 1) return;
+      const delta = newScrollTop - this.lastScrollTop;
+      if (Math.abs(delta) < 1) return;
       this.lastScrollTop = newScrollTop;
 
       // 检查是否滚动到边界
       this._checkScrollBoundary();
 
       if (this.options.onScroll) {
-        const range = this.getVisibleRange();
         this.options.onScroll({
           scrollTop: newScrollTop,
-          visibleStart: range.start,
-          visibleEnd: range.end,
+          delta: delta,
+          visibleStart: this.renderedStartIndex,
+          visibleEnd: this.renderedEndIndex,
         });
       }
     });
@@ -327,25 +327,18 @@ class FastScrollView {
       return;
     }
 
-    this.isUpdating = true;
-
-    const containerHeight = this.container.clientHeight;
-    const scrollTop = this.container.scrollTop;
-    const scrollBottom = scrollTop + containerHeight;
-
     // 如果还没有渲染任何内容，从当前滚动位置开始渲染
     if (this.renderedStartIndex === -1) {
+      this.isUpdating = true;
       // 如果设置为底部对齐，从底部开始渲染
       if (this.options.align === 'bottom') {
         this.renderFromBottom();
       } else {
-        this.renderFromPosition(scrollTop);
+        this.renderFromPosition(this.container.scrollTop);
       }
       this.isUpdating = false;
       return;
     }
-
-    this.isUpdating = false;
   }
 
   /**
@@ -525,23 +518,6 @@ class FastScrollView {
   }
 
   /**
-   * 开始批量更新（暂停渲染）
-   */
-  _beginUpdate() {
-    this.batchUpdateMode = true;
-  }
-
-  /**
-   * 结束批量更新（恢复渲染）
-   */
-  _endUpdate() {
-    this.batchUpdateMode = false;
-    this._updateVisibleItems();
-    this._adjustBottomAlign();
-  }
-
-
-  /**
    * 更新已渲染元素的 data-index 属性
    * 在删除或插入操作后调用，确保 DOM 元素的索引与数据索引一致
    */
@@ -562,12 +538,12 @@ class FastScrollView {
    * @param {Array} items - 新的数据数组
    */
   setItems(items) {
-    this._beginUpdate();
     this.items = items ? [...items] : [];
     this.renderedStartIndex = -1;
     this.renderedEndIndex = -1;
     this.contentContainer.innerHTML = '';
-    this._endUpdate();
+    this._updateVisibleItems();
+    this._adjustBottomAlign();
   }
 
   /**
@@ -579,19 +555,14 @@ class FastScrollView {
     if (index < 0 || index >= this.items.length) return;
     this.items[index] = item;
 
-    // 如果这个item已经被渲染，直接替换元素
-    if (index >= this.renderedStartIndex && index < this.renderedEndIndex) {
-      const existingElement = this.contentContainer.querySelector(`[data-index="${index}"]`);
-      if (existingElement) {
-        const newElement = this._createItemElement(item, index);
-        existingElement.replaceWith(newElement);
-        return;
-      }
-    }
+    // 如果 item 不在渲染范围内，无需渲染
+    if (index < this.renderedStartIndex || index >= this.renderedEndIndex) return;
 
-    // 如果不在已渲染范围内，调用 updateVisibleItems
-    if (!this.batchUpdateMode) {
-      this._updateVisibleItems();
+    // 替换元素
+    const element = this.contentContainer.querySelector(`[data-index="${index}"]`);
+    if (element) {
+      const newElement = this._createItemElement(item, index);
+      element.replaceWith(newElement);
     }
   }
 
@@ -605,14 +576,14 @@ class FastScrollView {
     const insertIndex = Math.max(0, Math.min(index, this.items.length));
     this.items.splice(insertIndex, 0, item);
 
-    // 插入操作比较复杂，重新渲染
-    this.renderedStartIndex = -1;
-    this.renderedEndIndex = -1;
-    this.contentContainer.innerHTML = '';
-
-    if (!this.batchUpdateMode) {
-      this._updateVisibleItems();
+    // 如果有渲染内容，清空并标记需要重新渲染
+    if (this.renderedStartIndex !== -1) {
+      this.renderedStartIndex = -1;
+      this.renderedEndIndex = -1;
+      this.contentContainer.innerHTML = '';
     }
+
+    this._updateVisibleItems();
   }
 
   /**
@@ -624,9 +595,21 @@ class FastScrollView {
     if (!Array.isArray(items)) return this.append([items]);
     if (items.length === 0) return;
 
-    this._beginUpdate();
+    const oldLength = this.items.length;
     this.items.push(...items);
-    this._endUpdate();
+
+    // 如果已经有渲染内容，直接扩展渲染
+    if (this.renderedStartIndex !== -1 && this.renderedEndIndex === oldLength) {
+      // 如果当前渲染到了最底部，直接扩展渲染新增的内容
+      const containerHeight = this.container.clientHeight;
+      const targetHeight = containerHeight * this.options.bufferThreshold;
+      this._expandDown(targetHeight);
+      this._adjustBottomAlign();
+    } else if (this.renderedStartIndex === -1) {
+      // 如果还没有渲染内容，触发首次渲染
+      this._updateVisibleItems();
+    }
+    // 如果已经有渲染内容但不在底部，不需要立即渲染新增的内容
   }
 
   /**
@@ -638,18 +621,54 @@ class FastScrollView {
     if (!Array.isArray(items)) return this.prepend([items]);
     if (items.length === 0) return;
 
-    this._beginUpdate();
+    const itemsToAdd = items.length;
+
     // 反向插入以保持顺序
     for (let i = items.length - 1; i >= 0; i--) {
       this.items.unshift(items[i]);
     }
 
-    // prepend 操作复杂，重新渲染
-    this.renderedStartIndex = -1;
-    this.renderedEndIndex = -1;
-    this.contentContainer.innerHTML = '';
+    // 如果已经有渲染内容，直接扩展渲染
+    if (this.renderedStartIndex !== -1) {
+      // 如果当前渲染从顶部开始（index = 0），需要扩展渲染新增的内容
+      if (this.renderedStartIndex === 0) {
+        // 保存当前滚动位置
+        const oldScrollHeight = this.container.scrollHeight;
+        const oldScrollTop = this.container.scrollTop;
 
-    this._endUpdate();
+        // 将当前已渲染的索引往后移动
+        this.renderedStartIndex += itemsToAdd;
+        this.renderedEndIndex += itemsToAdd;
+
+        // 更新所有已渲染元素的 data-index
+        this._updateRenderedIndices();
+
+        // 重置索引准备向上扩展
+        this.renderedStartIndex = itemsToAdd;
+
+        // 向上扩展渲染新增的内容
+        const containerHeight = this.container.clientHeight;
+        const targetHeight = containerHeight * this.options.bufferThreshold;
+        this._expandUp(targetHeight);
+
+        // 恢复滚动位置（补偿新增内容的高度）
+        requestAnimationFrame(() => {
+          const newScrollHeight = this.container.scrollHeight;
+          const heightDiff = newScrollHeight - oldScrollHeight;
+          this.container.scrollTop = oldScrollTop + heightDiff;
+        });
+      } else {
+        // 如果不是从顶部开始，只需调整索引
+        this.renderedStartIndex += itemsToAdd;
+        this.renderedEndIndex += itemsToAdd;
+        this._updateRenderedIndices();
+      }
+    } else {
+      // 如果还没有渲染内容，触发首次渲染
+      this._updateVisibleItems();
+    }
+
+    this._adjustBottomAlign();
   }
 
   /**
@@ -675,21 +694,15 @@ class FastScrollView {
     // 删除数据
     this.items.splice(index, 1);
 
-    // 情况1：不在可视范围内，只需调整索引
+    // 情况1：不在渲染范围内，只需调整索引
     if (!isInRenderedRange) {
       // 如果删除的位置在已渲染范围之前，需要调整索引
       if (this.renderedStartIndex !== -1 && index < this.renderedStartIndex) {
         this.renderedStartIndex--;
         this.renderedEndIndex--;
-
         // 更新所有已渲染元素的 data-index
         this._updateRenderedIndices();
-      } else if (this.renderedStartIndex !== -1 && index < this.renderedEndIndex) {
-        // 删除位置在已渲染范围内，但不在可视区域（理论上不应该发生，但做个保护）
-        this.renderedEndIndex--;
-        this._updateRenderedIndices();
       }
-
       return;
     }
 
@@ -825,43 +838,17 @@ class FastScrollView {
   }
 
   /**
-   * 获取可视区域信息
+   * 获取滚动偏移量
+   * @returns {number} 滚动偏移量
    */
-  getVisibleRange() {
-    if (this.renderedStartIndex === -1) {
-      return {
-        start: 0,
-        end: 0,
-        count: 0,
-      };
+  getScrollOffset() {
+    if (this.options.align !== 'bottom') {
+      return this.container.scrollTop;
     }
-    return {
-      start: this.renderedStartIndex,
-      end: this.renderedEndIndex,
-      count: this.renderedEndIndex - this.renderedStartIndex,
-    };
-  }
-
-  /**
-   * 判断是否滚动到底部
-   * 用于聊天应用场景：判断是否需要自动滚动到底部
-   * @param {number} threshold - 容差值（像素），默认为 10px
-   * @returns {boolean} 是否在底部
-   */
-  isAtScrollBottom(threshold = 10) {
-    if (this.items.length === 0) {
-      return true;
-    }
-
     const scrollTop = this.container.scrollTop;
     const clientHeight = this.container.clientHeight;
     const scrollHeight = this.container.scrollHeight;
-
-    // 计算当前滚动位置的底部距离总高度底部的距离
-    const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
-
-    // 如果距离小于阈值，认为在底部
-    return distanceFromBottom <= threshold;
+    return scrollHeight - (scrollTop + clientHeight);
   }
 
   /**
